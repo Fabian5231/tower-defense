@@ -172,6 +172,11 @@ class TowerDefenseGame extends Phaser.Scene {
             this.infoPanel = null;
         }
         
+        if (this.timerText) {
+            this.timerText.destroy();
+            this.timerText = null;
+        }
+        
         if (this.hoverGraphic) {
             this.hoverGraphic.destroy();
             this.hoverGraphic = null;
@@ -323,6 +328,7 @@ class TowerDefenseGame extends Phaser.Scene {
         this.moveEnemies(delta);
         this.updateTowers(time);
         this.updateFarms(time);
+        this.updateFarmTimer(time);
         this.moveProjectiles(delta);
         this.checkCollisions();
         this.removeDeadObjects();
@@ -591,39 +597,34 @@ class TowerDefenseGame extends Phaser.Scene {
         });
     }
     
-    createFarmProgressBar(farm) {
-    const progressX = this.infoPanel.x + this.infoPanel.width / 2;
-    const progressY = this.infoPanel.y + this.infoPanel.height + 10;
-
-    farm.progressBarBg = this.add.rectangle(progressX, progressY, 100, 8, 0x444444);
-    farm.progressBar = this.add.rectangle(progressX - 50, progressY, 100, 6, 0x00ff00);
-
-    farm.progressBarBg.setOrigin(0.5, 0.5);
-    farm.progressBar.setOrigin(0, 0.5);
-}
+    createFarmTimer(farm) {
+        const timerX = this.infoPanel.x;
+        const timerY = this.infoPanel.y + 40;
+        
+        this.timerText = this.add.text(timerX, timerY, 'Lade Timer...', {
+            fontSize: '10px',
+            fill: '#ffff00',
+            backgroundColor: '#222222',
+            padding: { x: 4, y: 2 }
+        }).setOrigin(0, 0);
+    }
     
-    updateFarmProgressBars(time) {
-    if (
-        this.selectedBuilding &&
-        this.selectedBuilding.type === 'farm' &&
-        this.selectedBuilding.progressBar
-    ) {
-        const farm = this.selectedBuilding;
-        const timeSinceLastProduction = time - farm.lastProduction;
-        const progress = Math.min(timeSinceLastProduction / farm.productionRate, 1);
-
-        farm.progressBar.scaleX = progress;
-
-        // Farbe je nach Fortschritt
-        if (progress < 0.5) {
-            farm.progressBar.setFillStyle(0xff0000);
-        } else if (progress < 0.8) {
-            farm.progressBar.setFillStyle(0xffff00);
-        } else {
-            farm.progressBar.setFillStyle(0x00ff00);
+    updateFarmTimer(time) {
+        if (this.selectedBuilding && this.selectedBuilding.type === 'farm' && this.timerText) {
+            const farm = this.selectedBuilding;
+            const timeSinceLastProduction = time - farm.lastProduction;
+            const timeRemaining = Math.max(0, farm.productionRate - timeSinceLastProduction);
+            const secondsRemaining = Math.ceil(timeRemaining / 1000);
+            
+            if (secondsRemaining > 0) {
+                this.timerText.setText(`Nächste Auszahlung in: ${secondsRemaining}s`);
+                this.timerText.setFill('#ffff00');
+            } else {
+                this.timerText.setText('Bereit für Auszahlung!');
+                this.timerText.setFill('#00ff00');
+            }
         }
     }
-}
     
     selectExistingBuilding(x, y) {
         let clickedBuilding = null;
@@ -687,7 +688,7 @@ class TowerDefenseGame extends Phaser.Scene {
 
     // 👉 Falls es eine Farm ist, Progressbar erzeugen
     if (building.type === 'farm') {
-        this.createFarmProgressBar(building);
+        this.createFarmTimer(building);
     }
 }
     

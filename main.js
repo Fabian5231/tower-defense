@@ -139,6 +139,18 @@ class TowerDefenseGame extends Phaser.Scene {
         }
     }
     
+    deselectBuilding() {
+        if (this.selectedBuildingType) {
+            this.buildingTypes[this.selectedBuildingType].button.setFillStyle(0x4a4a4a);
+            this.selectedBuildingType = null;
+        }
+        
+        if (this.hoverGraphic) {
+            this.hoverGraphic.destroy();
+            this.hoverGraphic = null;
+        }
+    }
+    
     handleClick(pointer) {
         if (pointer.x > this.mapWidth - 200) return;
         
@@ -200,6 +212,8 @@ class TowerDefenseGame extends Phaser.Scene {
                 this.hoverGraphic.destroy();
                 this.hoverGraphic = null;
             }
+            
+            this.deselectBuilding();
         } else {
             this.showInsufficientFundsMessage();
         }

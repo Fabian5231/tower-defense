@@ -172,7 +172,7 @@ class TowerDefenseGame extends Phaser.Scene {
             this.infoPanel = null;
         }
         
-        if (this.timerText) {
+        if (this.timerText && this.timerText.destroy) {
             this.timerText.destroy();
             this.timerText = null;
         }
@@ -598,31 +598,29 @@ class TowerDefenseGame extends Phaser.Scene {
     }
     
     createFarmTimer(farm) {
-        const timerX = this.infoPanel.x;
-        const timerY = this.infoPanel.y + 40;
-        
-        this.timerText = this.add.text(timerX, timerY, 'Lade Timer...', {
-            fontSize: '10px',
-            fill: '#ffff00',
-            backgroundColor: '#222222',
-            padding: { x: 4, y: 2 }
-        }).setOrigin(0, 0);
+        // Timer-Text wird direkt im Info-Panel integriert - kein separates Element nötig
+        this.timerText = { isIntegrated: true };
     }
     
     updateFarmTimer(time) {
-        if (this.selectedBuilding && this.selectedBuilding.type === 'farm' && this.timerText) {
+        if (this.selectedBuilding && this.selectedBuilding.type === 'farm' && this.timerText && this.infoPanel) {
             const farm = this.selectedBuilding;
             const timeSinceLastProduction = time - farm.lastProduction;
             const timeRemaining = Math.max(0, farm.productionRate - timeSinceLastProduction);
             const secondsRemaining = Math.ceil(timeRemaining / 1000);
             
+            let timerInfo = '';
             if (secondsRemaining > 0) {
-                this.timerText.setText(`Nächste Auszahlung in: ${secondsRemaining}s`);
-                this.timerText.setFill('#ffff00');
+                timerInfo = `Nächste Auszahlung: ${secondsRemaining}s`;
             } else {
-                this.timerText.setText('Bereit für Auszahlung!');
-                this.timerText.setFill('#00ff00');
+                timerInfo = 'Bereit für Auszahlung!';
             }
+            
+            // Update den gesamten Info-Panel Text mit Timer-Information
+            const baseText = `Farm\n+${farm.productionAmount} Batzen alle ${farm.productionRate / 1000} Sek\nHP: ${farm.health}/${farm.maxHealth}`;
+            const fullText = `${baseText}\n\n${timerInfo}`;
+            
+            this.infoPanel.setText(fullText);
         }
     }
     
@@ -661,36 +659,40 @@ class TowerDefenseGame extends Phaser.Scene {
     }
     
     showBuildingInfo(building) {
-    if (this.infoPanel) {
-        this.infoPanel.destroy();
-    }
-
-    let infoText = '';
-    if (building.type === 'tower') {
-        infoText = `Turm\nReichweite: ${building.range}px\nSchaden: ${building.damage}\nHP: ${building.health}/${building.maxHealth}`;
-    } else if (building.type === 'farm') {
-        infoText = `Farm\n+${building.productionAmount} Batzen\nalle ${
-            building.productionRate / 1000
-        } Sek\nHP: ${building.health}/${building.maxHealth}`;
-    } else if (building.type === 'factory') {
-        infoText = `Fabrik\n(noch keine Funktion)\nHP: ${building.health}/${building.maxHealth}`;
-    }
-
-    // InfoPanel-Text
-    this.infoPanel = this.add
-        .text(building.x + 50, building.y - 30, infoText, {
+        if (this.infoPanel) {
+            this.infoPanel.destroy();
+        }
+        if (this.timerText && this.timerText.destroy) {
+            this.timerText.destroy();
+            this.timerText = null;
+        }
+        
+        let infoText = '';
+        if (building.type === 'tower') {
+            infoText = `Turm\nReichweite: ${building.range}px\nSchaden: ${building.damage}\nHP: ${building.health}/${building.maxHealth}`;
+        } else if (building.type === 'farm') {
+            infoText = `Farm\n+${building.productionAmount} Batzen alle ${building.productionRate / 1000} Sek\nHP: ${building.health}/${building.maxHealth}`;
+        } else if (building.type === 'factory') {
+            infoText = `Fabrik\n(noch keine Funktion)\nHP: ${building.health}/${building.maxHealth}`;
+        }
+        
+        // Für Farms erweitern wir den Text um Timer-Platz
+        if (building.type === 'farm') {
+            infoText += '\n\nTimer: Lade...';
+        }
+        
+        // InfoPanel Container
+        this.infoPanel = this.add.text(building.x + 50, building.y - 30, infoText, {
             fontSize: '12px',
             fill: '#fff',
             backgroundColor: '#000000',
-            padding: { x: 8, y: 6 }
-        })
-        .setOrigin(0, 0.5);
-
-    // 👉 Falls es eine Farm ist, Progressbar erzeugen
-    if (building.type === 'farm') {
-        this.createFarmTimer(building);
+            padding: { x: 10, y: 8 }
+        }).setOrigin(0, 0.5);
+        
+        if (building.type === 'farm') {
+            this.createFarmTimer(building);
+        }
     }
-}
     
     showEnemyHealthBar(enemy) {
         if (!enemy.healthBarBg.visible) {

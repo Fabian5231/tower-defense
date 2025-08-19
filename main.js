@@ -580,33 +580,38 @@ class TowerDefenseGame extends Phaser.Scene {
     }
     
     createFarmProgressBar(farm) {
-        const progressY = this.infoPanel.y + 35;
-        const progressX = this.infoPanel.x;
-        
-        farm.progressBarBg = this.add.rectangle(progressX + 50, progressY, 100, 8, 0x444444);
-        farm.progressBar = this.add.rectangle(progressX + 50, progressY, 100, 6, 0x00ff00);
-        
-        farm.progressBarBg.setOrigin(0.5, 0.5);
-        farm.progressBar.setOrigin(0, 0.5);
-    }
+    const progressX = this.infoPanel.x + this.infoPanel.width / 2;
+    const progressY = this.infoPanel.y + this.infoPanel.height + 10;
+
+    farm.progressBarBg = this.add.rectangle(progressX, progressY, 100, 8, 0x444444);
+    farm.progressBar = this.add.rectangle(progressX - 50, progressY, 100, 6, 0x00ff00);
+
+    farm.progressBarBg.setOrigin(0.5, 0.5);
+    farm.progressBar.setOrigin(0, 0.5);
+}
     
     updateFarmProgressBars(time) {
-        if (this.selectedBuilding && this.selectedBuilding.type === 'farm' && this.selectedBuilding.progressBar) {
-            const farm = this.selectedBuilding;
-            const timeSinceLastProduction = time - farm.lastProduction;
-            const progress = Math.min(timeSinceLastProduction / farm.productionRate, 1);
-            
-            farm.progressBar.scaleX = progress;
-            
-            if (progress < 0.5) {
-                farm.progressBar.setFillStyle(0xff0000);
-            } else if (progress < 0.8) {
-                farm.progressBar.setFillStyle(0xffff00);
-            } else {
-                farm.progressBar.setFillStyle(0x00ff00);
-            }
+    if (
+        this.selectedBuilding &&
+        this.selectedBuilding.type === 'farm' &&
+        this.selectedBuilding.progressBar
+    ) {
+        const farm = this.selectedBuilding;
+        const timeSinceLastProduction = time - farm.lastProduction;
+        const progress = Math.min(timeSinceLastProduction / farm.productionRate, 1);
+
+        farm.progressBar.scaleX = progress;
+
+        // Farbe je nach Fortschritt
+        if (progress < 0.5) {
+            farm.progressBar.setFillStyle(0xff0000);
+        } else if (progress < 0.8) {
+            farm.progressBar.setFillStyle(0xffff00);
+        } else {
+            farm.progressBar.setFillStyle(0x00ff00);
         }
     }
+}
     
     selectExistingBuilding(x, y) {
         let clickedBuilding = null;
@@ -643,26 +648,36 @@ class TowerDefenseGame extends Phaser.Scene {
     }
     
     showBuildingInfo(building) {
-        if (this.infoPanel) {
-            this.infoPanel.destroy();
-        }
-        
-        let infoText = '';
-        if (building.type === 'tower') {
-            infoText = `Turm\nReichweite: ${building.range}px\nSchaden: ${building.damage}\nHP: ${building.health}/${building.maxHealth}`;
-        } else if (building.type === 'farm') {
-            infoText = `Farm\n+${building.productionAmount} Batzen\nalle ${building.productionRate/1000} Sek\nHP: ${building.health}/${building.maxHealth}`;
-        } else if (building.type === 'factory') {
-            infoText = `Fabrik\n(noch keine Funktion)\nHP: ${building.health}/${building.maxHealth}`;
-        }
-        
-        this.infoPanel = this.add.text(building.x + 50, building.y - 30, infoText, {
+    if (this.infoPanel) {
+        this.infoPanel.destroy();
+    }
+
+    let infoText = '';
+    if (building.type === 'tower') {
+        infoText = `Turm\nReichweite: ${building.range}px\nSchaden: ${building.damage}\nHP: ${building.health}/${building.maxHealth}`;
+    } else if (building.type === 'farm') {
+        infoText = `Farm\n+${building.productionAmount} Batzen\nalle ${
+            building.productionRate / 1000
+        } Sek\nHP: ${building.health}/${building.maxHealth}`;
+    } else if (building.type === 'factory') {
+        infoText = `Fabrik\n(noch keine Funktion)\nHP: ${building.health}/${building.maxHealth}`;
+    }
+
+    // InfoPanel-Text
+    this.infoPanel = this.add
+        .text(building.x + 50, building.y - 30, infoText, {
             fontSize: '12px',
             fill: '#fff',
             backgroundColor: '#000000',
             padding: { x: 8, y: 6 }
-        }).setOrigin(0, 0.5);
+        })
+        .setOrigin(0, 0.5);
+
+    // 👉 Falls es eine Farm ist, Progressbar erzeugen
+    if (building.type === 'farm') {
+        this.createFarmProgressBar(building);
     }
+}
     
     showEnemyHealthBar(enemy) {
         if (!enemy.healthBarBg.visible) {

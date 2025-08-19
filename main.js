@@ -255,7 +255,7 @@ class TowerDefenseGame extends Phaser.Scene {
             health: 100,
             maxHealth: 100,
             type: 'farm',
-            lastProduction: 0,
+            lastProduction: this.time.now,
             productionRate: 30000,
             productionAmount: 5,
             graphic: this.add.rectangle(x, y, 30, 30, 0x8b4513),

@@ -15,6 +15,14 @@ class TowerDefenseGame extends Phaser.Scene {
         
         this.enemySpawnTimer = 0;
         this.enemySpawnDelay = 2000;
+        
+        this.selectedBuildingType = null;
+        this.hoverGraphic = null;
+        this.buildingTypes = {
+            tower: { cost: 10, name: 'Turm', symbol: '🏯' },
+            farm: { cost: 10, name: 'Feld', symbol: '🌾' },
+            factory: { cost: 10, name: 'Fabrik', symbol: '🏭' }
+        };
     }
     
     preload() {
@@ -26,15 +34,17 @@ class TowerDefenseGame extends Phaser.Scene {
         this.townHallHealthText = this.add.text(10, 40, `Rathaus: ${this.townHallHealth} HP`, { fontSize: '18px', fill: '#ff6b6b' });
         this.scoreText = this.add.text(10, 65, `Punkte: ${this.score}`, { fontSize: '18px', fill: '#fff' });
         this.currencyText = this.add.text(10, 90, `Batzen: ${this.currency}`, { fontSize: '18px', fill: '#ffd700' });
-        this.add.text(300, 40, 'Tower: 10 Batzen', { fontSize: '14px', fill: '#aaa' });
         
         this.createTownHall();
+        this.createBuildingMenu();
         this.createInitialTower();
         
         this.input.on('pointerdown', (pointer) => {
-            if (pointer.y > 100) {
-                this.tryPlaceTower(pointer.x, pointer.y);
-            }
+            this.handleClick(pointer);
+        });
+        
+        this.input.on('pointermove', (pointer) => {
+            this.handleMouseMove(pointer);
         });
     }
     
@@ -58,20 +68,157 @@ class TowerDefenseGame extends Phaser.Scene {
         this.townHallHealthBar = this.add.rectangle(this.mapCenter.x, this.mapCenter.y - 60, 80, 8, 0x00ff00);
     }
     
+    createBuildingMenu() {
+        const menuX = this.mapWidth - 200;
+        const menuY = 20;
+        
+        const menuBg = this.add.rectangle(menuX + 100, menuY + 120, 180, 220, 0x333333, 0.9);
+        menuBg.setStrokeStyle(2, 0x666666);
+        
+        this.add.text(menuX + 100, menuY + 30, 'Gebäude', { 
+            fontSize: '20px', 
+            fill: '#fff',
+            fontStyle: 'bold'
+        }).setOrigin(0.5);
+        
+        let yOffset = 0;
+        Object.keys(this.buildingTypes).forEach((type, index) => {
+            const building = this.buildingTypes[type];
+            const buttonY = menuY + 70 + (yOffset * 50);
+            
+            const button = this.add.rectangle(menuX + 100, buttonY, 160, 40, 0x4a4a4a, 0.9);
+            button.setStrokeStyle(2, 0x666666);
+            button.setInteractive();
+            
+            const buttonText = this.add.text(menuX + 50, buttonY, 
+                `${building.symbol} ${building.name}`, 
+                { fontSize: '14px', fill: '#fff' }
+            ).setOrigin(0, 0.5);
+            
+            const costText = this.add.text(menuX + 150, buttonY, 
+                `${building.cost}B`, 
+                { fontSize: '12px', fill: '#ffd700' }
+            ).setOrigin(1, 0.5);
+            
+            button.on('pointerdown', () => {
+                this.selectBuilding(type);
+            });
+            
+            button.on('pointerover', () => {
+                button.setFillStyle(0x5a5a5a);
+            });
+            
+            button.on('pointerout', () => {
+                if (this.selectedBuildingType !== type) {
+                    button.setFillStyle(0x4a4a4a);
+                }
+            });
+            
+            this.buildingTypes[type].button = button;
+            this.buildingTypes[type].buttonText = buttonText;
+            this.buildingTypes[type].costText = costText;
+            
+            yOffset++;
+        });
+    }
+    
     createInitialTower() {
         this.placeTowerFree(this.mapCenter.x - 100, this.mapCenter.y - 100);
     }
     
-    tryPlaceTower(x, y) {
-        const towerCost = 10;
-        if (this.currency >= towerCost) {
-            this.currency -= towerCost;
+    selectBuilding(type) {
+        if (this.selectedBuildingType) {
+            this.buildingTypes[this.selectedBuildingType].button.setFillStyle(0x4a4a4a);
+        }
+        
+        this.selectedBuildingType = type;
+        this.buildingTypes[type].button.setFillStyle(0x6a6a6a);
+        
+        if (this.hoverGraphic) {
+            this.hoverGraphic.destroy();
+        }
+    }
+    
+    handleClick(pointer) {
+        if (pointer.x > this.mapWidth - 200) return;
+        
+        if (this.selectedBuildingType && pointer.y > 100) {
+            this.tryPlaceBuilding(pointer.x, pointer.y, this.selectedBuildingType);
+        }
+    }
+    
+    handleMouseMove(pointer) {
+        if (!this.selectedBuildingType || pointer.x > this.mapWidth - 200) {
+            if (this.hoverGraphic) {
+                this.hoverGraphic.setVisible(false);
+            }
+            return;
+        }
+        
+        if (pointer.y > 100) {
+            this.showBuildingPreview(pointer.x, pointer.y, this.selectedBuildingType);
+        }
+    }
+    
+    showBuildingPreview(x, y, type) {
+        if (this.hoverGraphic) {
+            this.hoverGraphic.destroy();
+        }
+        
+        const building = this.buildingTypes[type];
+        const canAfford = this.currency >= building.cost;
+        const color = canAfford ? 0x00ff00 : 0xff0000;
+        const alpha = 0.5;
+        
+        if (type === 'tower') {
+            this.hoverGraphic = this.add.circle(x, y, 15, color, alpha);
+            this.hoverGraphic.setStrokeStyle(2, color, 0.8);
+        } else if (type === 'farm') {
+            this.hoverGraphic = this.add.rectangle(x, y, 30, 30, color, alpha);
+            this.hoverGraphic.setStrokeStyle(2, color, 0.8);
+        } else if (type === 'factory') {
+            this.hoverGraphic = this.add.rectangle(x, y, 40, 25, color, alpha);
+            this.hoverGraphic.setStrokeStyle(2, color, 0.8);
+        }
+    }
+    
+    tryPlaceBuilding(x, y, type) {
+        const building = this.buildingTypes[type];
+        if (this.currency >= building.cost) {
+            this.currency -= building.cost;
             this.currencyText.setText(`Batzen: ${this.currency}`);
-            this.placeTowerFree(x, y);
+            
+            if (type === 'tower') {
+                this.placeTowerFree(x, y);
+            } else if (type === 'farm') {
+                this.placeFarm(x, y);
+            } else if (type === 'factory') {
+                this.placeFactory(x, y);
+            }
+            
+            if (this.hoverGraphic) {
+                this.hoverGraphic.destroy();
+                this.hoverGraphic = null;
+            }
         } else {
             this.showInsufficientFundsMessage();
         }
     }
+    
+    placeFarm(x, y) {
+        const farmGraphic = this.add.rectangle(x, y, 30, 30, 0x8b4513);
+        farmGraphic.setStrokeStyle(2, 0x654321);
+        
+        this.add.text(x, y, '🌾', { fontSize: '20px' }).setOrigin(0.5);
+    }
+    
+    placeFactory(x, y) {
+        const factoryGraphic = this.add.rectangle(x, y, 40, 25, 0x666666);
+        factoryGraphic.setStrokeStyle(2, 0x444444);
+        
+        this.add.text(x, y, '🏭', { fontSize: '18px' }).setOrigin(0.5);
+    }
+    
     
     placeTowerFree(x, y) {
         const tower = {

@@ -267,7 +267,7 @@ class TowerDefenseGame extends Phaser.Scene {
             y: y,
             health: 75,
             maxHealth: 75,
-            range: 120,
+            range: 60,
             damage: 25,
             fireRate: 1000,
             lastFired: 0,

@@ -7,6 +7,7 @@ class TowerDefenseGame extends Phaser.Scene {
         this.projectiles = [];
         this.lives = 3;
         this.score = 0;
+        this.currency = 50;
         
         this.path = [
             { x: -50, y: 300 },
@@ -25,13 +26,15 @@ class TowerDefenseGame extends Phaser.Scene {
         this.add.text(10, 10, 'Tower Defense', { fontSize: '24px', fill: '#fff' });
         this.livesText = this.add.text(10, 40, `Leben: ${this.lives}`, { fontSize: '18px', fill: '#fff' });
         this.scoreText = this.add.text(10, 65, `Punkte: ${this.score}`, { fontSize: '18px', fill: '#fff' });
+        this.currencyText = this.add.text(10, 90, `Batzen: ${this.currency}`, { fontSize: '18px', fill: '#ffd700' });
+        this.add.text(200, 40, 'Tower: 10 Batzen', { fontSize: '14px', fill: '#aaa' });
         
         this.drawPath();
         this.createInitialTower();
         
         this.input.on('pointerdown', (pointer) => {
             if (pointer.y > 100) {
-                this.placeTower(pointer.x, pointer.y);
+                this.tryPlaceTower(pointer.x, pointer.y);
             }
         });
     }
@@ -46,10 +49,21 @@ class TowerDefenseGame extends Phaser.Scene {
     }
     
     createInitialTower() {
-        this.placeTower(400, 200);
+        this.placeTowerFree(400, 200);
     }
     
-    placeTower(x, y) {
+    tryPlaceTower(x, y) {
+        const towerCost = 10;
+        if (this.currency >= towerCost) {
+            this.currency -= towerCost;
+            this.currencyText.setText(`Batzen: ${this.currency}`);
+            this.placeTowerFree(x, y);
+        } else {
+            this.showInsufficientFundsMessage();
+        }
+    }
+    
+    placeTowerFree(x, y) {
         const tower = {
             x: x,
             y: y,
@@ -211,7 +225,9 @@ class TowerDefenseGame extends Phaser.Scene {
                     if (enemy.health <= 0) {
                         enemy.toRemove = true;
                         this.score += 10;
+                        this.currency += 5;
                         this.scoreText.setText(`Punkte: ${this.score}`);
+                        this.currencyText.setText(`Batzen: ${this.currency}`);
                     }
                 }
             });
@@ -260,6 +276,19 @@ class TowerDefenseGame extends Phaser.Scene {
         }).setOrigin(0.5);
         
         this.scene.pause();
+    }
+    
+    showInsufficientFundsMessage() {
+        const message = this.add.text(400, 150, 'Nicht genug Batzen!', {
+            fontSize: '20px',
+            fill: '#ff0000',
+            backgroundColor: '#000000',
+            padding: { x: 10, y: 5 }
+        }).setOrigin(0.5);
+        
+        this.time.delayedCall(1500, () => {
+            message.destroy();
+        });
     }
 }
 

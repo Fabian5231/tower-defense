@@ -152,6 +152,18 @@ class TowerDefenseGame extends Phaser.Scene {
                 this.selectedBuilding.rangeIndicator.destroy();
                 this.selectedBuilding.rangeIndicator = null;
             }
+            
+            // Progress-Bar cleanup für die ausgewählte Farm
+            if (this.selectedBuilding.progressBar) {
+                this.selectedBuilding.progressBar.destroy();
+                this.selectedBuilding.progressBar = null;
+            }
+            
+            if (this.selectedBuilding.progressBarBg) {
+                this.selectedBuilding.progressBarBg.destroy();
+                this.selectedBuilding.progressBarBg = null;
+            }
+            
             this.selectedBuilding = null;
         }
         

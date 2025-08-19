@@ -5,14 +5,13 @@ class TowerDefenseGame extends Phaser.Scene {
         this.enemies = [];
         this.towers = [];
         this.projectiles = [];
-        this.lives = 3;
+        this.townHallHealth = 100;
         this.score = 0;
         this.currency = 50;
         
-        this.path = [
-            { x: -50, y: 300 },
-            { x: 850, y: 300 }
-        ];
+        this.mapCenter = { x: 600, y: 400 };
+        this.mapWidth = 1200;
+        this.mapHeight = 800;
         
         this.enemySpawnTimer = 0;
         this.enemySpawnDelay = 2000;
@@ -24,12 +23,12 @@ class TowerDefenseGame extends Phaser.Scene {
     
     create() {
         this.add.text(10, 10, 'Tower Defense', { fontSize: '24px', fill: '#fff' });
-        this.livesText = this.add.text(10, 40, `Leben: ${this.lives}`, { fontSize: '18px', fill: '#fff' });
+        this.townHallHealthText = this.add.text(10, 40, `Rathaus: ${this.townHallHealth} HP`, { fontSize: '18px', fill: '#ff6b6b' });
         this.scoreText = this.add.text(10, 65, `Punkte: ${this.score}`, { fontSize: '18px', fill: '#fff' });
         this.currencyText = this.add.text(10, 90, `Batzen: ${this.currency}`, { fontSize: '18px', fill: '#ffd700' });
-        this.add.text(200, 40, 'Tower: 10 Batzen', { fontSize: '14px', fill: '#aaa' });
+        this.add.text(300, 40, 'Tower: 10 Batzen', { fontSize: '14px', fill: '#aaa' });
         
-        this.drawPath();
+        this.createTownHall();
         this.createInitialTower();
         
         this.input.on('pointerdown', (pointer) => {
@@ -39,17 +38,28 @@ class TowerDefenseGame extends Phaser.Scene {
         });
     }
     
-    drawPath() {
-        const graphics = this.add.graphics();
-        graphics.lineStyle(20, 0x666666);
-        graphics.beginPath();
-        graphics.moveTo(this.path[0].x, this.path[0].y);
-        graphics.lineTo(this.path[1].x, this.path[1].y);
-        graphics.strokePath();
+    createTownHall() {
+        this.townHall = {
+            x: this.mapCenter.x,
+            y: this.mapCenter.y,
+            health: this.townHallHealth,
+            maxHealth: this.townHallHealth,
+            radius: 40
+        };
+        
+        const townHallGraphic = this.add.circle(this.mapCenter.x, this.mapCenter.y, 40, 0x8b4513);
+        townHallGraphic.setStrokeStyle(4, 0x654321);
+        
+        this.add.text(this.mapCenter.x, this.mapCenter.y - 5, '👑', { 
+            fontSize: '32px' 
+        }).setOrigin(0.5);
+        
+        const healthBarBg = this.add.rectangle(this.mapCenter.x, this.mapCenter.y - 60, 80, 8, 0x666666);
+        this.townHallHealthBar = this.add.rectangle(this.mapCenter.x, this.mapCenter.y - 60, 80, 8, 0x00ff00);
     }
     
     createInitialTower() {
-        this.placeTowerFree(400, 200);
+        this.placeTowerFree(this.mapCenter.x - 100, this.mapCenter.y - 100);
     }
     
     tryPlaceTower(x, y) {
@@ -88,7 +98,7 @@ class TowerDefenseGame extends Phaser.Scene {
         this.checkCollisions();
         this.removeDeadObjects();
         
-        if (this.lives <= 0) {
+        if (this.townHallHealth <= 0) {
             this.gameOver();
         }
     }
@@ -101,26 +111,62 @@ class TowerDefenseGame extends Phaser.Scene {
     }
     
     createEnemy() {
+        const spawnPoint = this.getRandomSpawnPoint();
         const enemy = {
-            x: this.path[0].x,
-            y: this.path[0].y,
+            x: spawnPoint.x,
+            y: spawnPoint.y,
             health: 50,
             maxHealth: 50,
             speed: 50,
-            graphic: this.add.rectangle(this.path[0].x, this.path[0].y, 20, 20, 0xff0000),
-            healthBar: this.add.rectangle(this.path[0].x, this.path[0].y - 15, 20, 4, 0x00ff00)
+            graphic: this.add.rectangle(spawnPoint.x, spawnPoint.y, 20, 20, 0xff0000),
+            healthBar: this.add.rectangle(spawnPoint.x, spawnPoint.y - 15, 20, 4, 0x00ff00)
         };
         
         this.enemies.push(enemy);
     }
     
+    getRandomSpawnPoint() {
+        const side = Math.floor(Math.random() * 4);
+        let x, y;
+        
+        switch(side) {
+            case 0: // Top
+                x = Math.random() * this.mapWidth;
+                y = -50;
+                break;
+            case 1: // Right  
+                x = this.mapWidth + 50;
+                y = Math.random() * this.mapHeight;
+                break;
+            case 2: // Bottom
+                x = Math.random() * this.mapWidth;
+                y = this.mapHeight + 50;
+                break;
+            case 3: // Left
+                x = -50;
+                y = Math.random() * this.mapHeight;
+                break;
+        }
+        
+        return { x, y };
+    }
+    
     moveEnemies(delta) {
         this.enemies.forEach(enemy => {
             const direction = {
-                x: this.path[1].x - this.path[0].x,
-                y: this.path[1].y - this.path[0].y
+                x: this.mapCenter.x - enemy.x,
+                y: this.mapCenter.y - enemy.y
             };
             const distance = Math.sqrt(direction.x * direction.x + direction.y * direction.y);
+            
+            if (distance < this.townHall.radius + 10) {
+                this.townHallHealth -= 10;
+                this.townHallHealthText.setText(`Rathaus: ${this.townHallHealth} HP`);
+                this.townHallHealthBar.scaleX = this.townHallHealth / this.townHall.maxHealth;
+                enemy.toRemove = true;
+                return;
+            }
+            
             direction.x /= distance;
             direction.y /= distance;
             
@@ -133,12 +179,6 @@ class TowerDefenseGame extends Phaser.Scene {
             enemy.healthBar.y = enemy.y - 15;
             
             enemy.healthBar.scaleX = enemy.health / enemy.maxHealth;
-            
-            if (enemy.x > 850) {
-                this.lives--;
-                this.livesText.setText(`Leben: ${this.lives}`);
-                enemy.toRemove = true;
-            }
         });
     }
     
@@ -254,32 +294,32 @@ class TowerDefenseGame extends Phaser.Scene {
     }
     
     gameOver() {
-        this.add.text(400, 300, 'GAME OVER', { 
+        this.add.text(this.mapCenter.x, this.mapCenter.y - 100, 'RATHAUS ZERSTÖRT!', { 
             fontSize: '48px', 
             fill: '#ff0000',
-            originX: 0.5,
-            originY: 0.5
+            backgroundColor: '#000000',
+            padding: { x: 20, y: 10 }
         }).setOrigin(0.5);
         
-        this.add.text(400, 350, `Endpunktzahl: ${this.score}`, { 
+        this.add.text(this.mapCenter.x, this.mapCenter.y - 40, `Endpunktzahl: ${this.score}`, { 
             fontSize: '24px', 
             fill: '#fff',
-            originX: 0.5,
-            originY: 0.5
+            backgroundColor: '#000000',
+            padding: { x: 10, y: 5 }
         }).setOrigin(0.5);
         
-        this.add.text(400, 400, 'F5 zum Neustarten', { 
+        this.add.text(this.mapCenter.x, this.mapCenter.y + 10, 'F5 zum Neustarten', { 
             fontSize: '18px', 
             fill: '#aaa',
-            originX: 0.5,
-            originY: 0.5
+            backgroundColor: '#000000',
+            padding: { x: 10, y: 5 }
         }).setOrigin(0.5);
         
         this.scene.pause();
     }
     
     showInsufficientFundsMessage() {
-        const message = this.add.text(400, 150, 'Nicht genug Batzen!', {
+        const message = this.add.text(this.mapCenter.x, 150, 'Nicht genug Batzen!', {
             fontSize: '20px',
             fill: '#ff0000',
             backgroundColor: '#000000',
@@ -294,8 +334,8 @@ class TowerDefenseGame extends Phaser.Scene {
 
 const config = {
     type: Phaser.AUTO,
-    width: 800,
-    height: 600,
+    width: 1200,
+    height: 800,
     parent: 'game-container',
     backgroundColor: '#2c5f3f',
     scene: TowerDefenseGame,

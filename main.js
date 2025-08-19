@@ -5,6 +5,7 @@ class TowerDefenseGame extends Phaser.Scene {
         this.enemies = [];
         this.towers = [];
         this.projectiles = [];
+        this.buildings = [];
         this.townHallHealth = 100;
         this.score = 0;
         this.currency = 50;
@@ -220,17 +221,43 @@ class TowerDefenseGame extends Phaser.Scene {
     }
     
     placeFarm(x, y) {
-        const farmGraphic = this.add.rectangle(x, y, 30, 30, 0x8b4513);
-        farmGraphic.setStrokeStyle(2, 0x654321);
+        const farm = {
+            x: x,
+            y: y,
+            health: 100,
+            maxHealth: 100,
+            type: 'farm',
+            graphic: this.add.rectangle(x, y, 30, 30, 0x8b4513),
+            symbol: this.add.text(x, y, '🌾', { fontSize: '20px' }).setOrigin(0.5),
+            healthBarBg: this.add.rectangle(x, y - 25, 32, 6, 0x666666),
+            healthBar: this.add.rectangle(x, y - 25, 30, 4, 0x00ff00)
+        };
         
-        this.add.text(x, y, '🌾', { fontSize: '20px' }).setOrigin(0.5);
+        farm.graphic.setStrokeStyle(2, 0x654321);
+        farm.healthBarBg.setVisible(false);
+        farm.healthBar.setVisible(false);
+        
+        this.buildings.push(farm);
     }
     
     placeFactory(x, y) {
-        const factoryGraphic = this.add.rectangle(x, y, 40, 25, 0x666666);
-        factoryGraphic.setStrokeStyle(2, 0x444444);
+        const factory = {
+            x: x,
+            y: y,
+            health: 150,
+            maxHealth: 150,
+            type: 'factory',
+            graphic: this.add.rectangle(x, y, 40, 25, 0x666666),
+            symbol: this.add.text(x, y, '🏭', { fontSize: '18px' }).setOrigin(0.5),
+            healthBarBg: this.add.rectangle(x, y - 20, 42, 6, 0x666666),
+            healthBar: this.add.rectangle(x, y - 20, 40, 4, 0x00ff00)
+        };
         
-        this.add.text(x, y, '🏭', { fontSize: '18px' }).setOrigin(0.5);
+        factory.graphic.setStrokeStyle(2, 0x444444);
+        factory.healthBarBg.setVisible(false);
+        factory.healthBar.setVisible(false);
+        
+        this.buildings.push(factory);
     }
     
     
@@ -238,17 +265,26 @@ class TowerDefenseGame extends Phaser.Scene {
         const tower = {
             x: x,
             y: y,
+            health: 75,
+            maxHealth: 75,
             range: 120,
             damage: 25,
             fireRate: 1000,
             lastFired: 0,
-            graphic: this.add.circle(x, y, 15, 0x00ff00)
+            type: 'tower',
+            graphic: this.add.circle(x, y, 15, 0x00ff00),
+            healthBarBg: this.add.rectangle(x, y - 25, 32, 6, 0x666666),
+            healthBar: this.add.rectangle(x, y - 25, 30, 4, 0x00ff00)
         };
         
         const rangeCircle = this.add.circle(x, y, tower.range, 0x00ff00, 0.1);
         rangeCircle.setStrokeStyle(2, 0x00ff00, 0.3);
         
+        tower.healthBarBg.setVisible(false);
+        tower.healthBar.setVisible(false);
+        
         this.towers.push(tower);
+        this.buildings.push(tower);
     }
     
     update(time, delta) {
@@ -258,6 +294,7 @@ class TowerDefenseGame extends Phaser.Scene {
         this.moveProjectiles(delta);
         this.checkCollisions();
         this.removeDeadObjects();
+        this.removeDeadBuildings();
         
         if (this.townHallHealth <= 0) {
             this.gameOver();
@@ -280,8 +317,12 @@ class TowerDefenseGame extends Phaser.Scene {
             maxHealth: 50,
             speed: 50,
             graphic: this.add.rectangle(spawnPoint.x, spawnPoint.y, 20, 20, 0xff0000),
+            healthBarBg: this.add.rectangle(spawnPoint.x, spawnPoint.y - 15, 22, 6, 0x666666),
             healthBar: this.add.rectangle(spawnPoint.x, spawnPoint.y - 15, 20, 4, 0x00ff00)
         };
+        
+        enemy.healthBarBg.setVisible(false);
+        enemy.healthBar.setVisible(false);
         
         this.enemies.push(enemy);
     }
@@ -336,10 +377,14 @@ class TowerDefenseGame extends Phaser.Scene {
             
             enemy.graphic.x = enemy.x;
             enemy.graphic.y = enemy.y;
+            enemy.healthBarBg.x = enemy.x;
+            enemy.healthBarBg.y = enemy.y - 15;
             enemy.healthBar.x = enemy.x;
             enemy.healthBar.y = enemy.y - 15;
             
-            enemy.healthBar.scaleX = enemy.health / enemy.maxHealth;
+            if (enemy.healthBar.visible) {
+                enemy.healthBar.scaleX = enemy.health / enemy.maxHealth;
+            }
         });
     }
     
@@ -423,6 +468,8 @@ class TowerDefenseGame extends Phaser.Scene {
                     enemy.health -= projectile.damage;
                     projectile.toRemove = true;
                     
+                    this.showEnemyHealthBar(enemy);
+                    
                     if (enemy.health <= 0) {
                         enemy.toRemove = true;
                         this.score += 10;
@@ -439,6 +486,7 @@ class TowerDefenseGame extends Phaser.Scene {
         this.enemies = this.enemies.filter(enemy => {
             if (enemy.toRemove) {
                 enemy.graphic.destroy();
+                enemy.healthBarBg.destroy();
                 enemy.healthBar.destroy();
                 return false;
             }
@@ -479,6 +527,40 @@ class TowerDefenseGame extends Phaser.Scene {
         this.scene.pause();
     }
     
+    showEnemyHealthBar(enemy) {
+        if (!enemy.healthBarBg.visible) {
+            enemy.healthBarBg.setVisible(true);
+            enemy.healthBar.setVisible(true);
+        }
+        enemy.healthBar.scaleX = enemy.health / enemy.maxHealth;
+    }
+    
+    showBuildingHealthBar(building) {
+        if (!building.healthBarBg.visible) {
+            building.healthBarBg.setVisible(true);
+            building.healthBar.setVisible(true);
+        }
+        building.healthBar.scaleX = building.health / building.maxHealth;
+    }
+    
+    damageBuildingAt(x, y, damage) {
+        this.buildings.forEach(building => {
+            const distance = Math.sqrt(
+                (building.x - x) * (building.x - x) + 
+                (building.y - y) * (building.y - y)
+            );
+            
+            if (distance < 30) {
+                building.health -= damage;
+                this.showBuildingHealthBar(building);
+                
+                if (building.health <= 0) {
+                    building.toRemove = true;
+                }
+            }
+        });
+    }
+    
     showInsufficientFundsMessage() {
         const message = this.add.text(this.mapCenter.x, 150, 'Nicht genug Batzen!', {
             fontSize: '20px',
@@ -489,6 +571,24 @@ class TowerDefenseGame extends Phaser.Scene {
         
         this.time.delayedCall(1500, () => {
             message.destroy();
+        });
+    }
+    
+    removeDeadBuildings() {
+        this.buildings = this.buildings.filter(building => {
+            if (building.toRemove) {
+                building.graphic.destroy();
+                if (building.symbol) building.symbol.destroy();
+                building.healthBarBg.destroy();
+                building.healthBar.destroy();
+                
+                if (building.type === 'tower') {
+                    this.towers = this.towers.filter(tower => tower !== building);
+                }
+                
+                return false;
+            }
+            return true;
         });
     }
 }

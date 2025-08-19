@@ -8,7 +8,7 @@ class TowerDefenseGame extends Phaser.Scene {
         this.buildings = [];
         this.townHallHealth = 100;
         this.score = 0;
-        this.currency = 50;
+        this.currency = 60;
         
         this.mapCenter = { x: 600, y: 400 };
         this.mapWidth = 1200;
@@ -40,7 +40,6 @@ class TowerDefenseGame extends Phaser.Scene {
         
         this.createTownHall();
         this.createBuildingMenu();
-        this.createInitialTower();
         
         this.input.on('pointerdown', (pointer) => {
             this.handleClick(pointer);
@@ -128,9 +127,6 @@ class TowerDefenseGame extends Phaser.Scene {
         });
     }
     
-    createInitialTower() {
-        this.placeTowerFree(this.mapCenter.x - 100, this.mapCenter.y - 100);
-    }
     
     selectBuilding(type) {
         if (this.selectedBuildingType) {

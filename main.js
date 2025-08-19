@@ -19,6 +19,8 @@ class TowerDefenseGame extends Phaser.Scene {
         
         this.selectedBuildingType = null;
         this.hoverGraphic = null;
+        this.selectedBuilding = null;
+        this.infoPanel = null;
         this.buildingTypes = {
             tower: { cost: 10, name: 'Turm', symbol: '🏯' },
             farm: { cost: 10, name: 'Feld', symbol: '🌾' },
@@ -65,8 +67,11 @@ class TowerDefenseGame extends Phaser.Scene {
             fontSize: '32px' 
         }).setOrigin(0.5);
         
-        const healthBarBg = this.add.rectangle(this.mapCenter.x, this.mapCenter.y - 60, 80, 8, 0x666666);
+        this.townHallHealthBarBg = this.add.rectangle(this.mapCenter.x, this.mapCenter.y - 60, 82, 10, 0x666666);
         this.townHallHealthBar = this.add.rectangle(this.mapCenter.x, this.mapCenter.y - 60, 80, 8, 0x00ff00);
+        
+        this.townHallHealthBarBg.setVisible(false);
+        this.townHallHealthBar.setVisible(false);
     }
     
     createBuildingMenu() {
@@ -146,6 +151,19 @@ class TowerDefenseGame extends Phaser.Scene {
             this.selectedBuildingType = null;
         }
         
+        if (this.selectedBuilding) {
+            if (this.selectedBuilding.rangeIndicator) {
+                this.selectedBuilding.rangeIndicator.destroy();
+                this.selectedBuilding.rangeIndicator = null;
+            }
+            this.selectedBuilding = null;
+        }
+        
+        if (this.infoPanel) {
+            this.infoPanel.destroy();
+            this.infoPanel = null;
+        }
+        
         if (this.hoverGraphic) {
             this.hoverGraphic.destroy();
             this.hoverGraphic = null;
@@ -157,6 +175,8 @@ class TowerDefenseGame extends Phaser.Scene {
         
         if (this.selectedBuildingType && pointer.y > 100) {
             this.tryPlaceBuilding(pointer.x, pointer.y, this.selectedBuildingType);
+        } else if (!this.selectedBuildingType && pointer.y > 100) {
+            this.selectExistingBuilding(pointer.x, pointer.y);
         }
     }
     
@@ -227,6 +247,9 @@ class TowerDefenseGame extends Phaser.Scene {
             health: 100,
             maxHealth: 100,
             type: 'farm',
+            lastProduction: 0,
+            productionRate: 30000,
+            productionAmount: 5,
             graphic: this.add.rectangle(x, y, 30, 30, 0x8b4513),
             symbol: this.add.text(x, y, '🌾', { fontSize: '20px' }).setOrigin(0.5),
             healthBarBg: this.add.rectangle(x, y - 25, 32, 6, 0x666666),
@@ -291,6 +314,7 @@ class TowerDefenseGame extends Phaser.Scene {
         this.spawnEnemies(time);
         this.moveEnemies(delta);
         this.updateTowers(time);
+        this.updateFarms(time);
         this.moveProjectiles(delta);
         this.checkCollisions();
         this.removeDeadObjects();
@@ -364,7 +388,13 @@ class TowerDefenseGame extends Phaser.Scene {
             if (distance < this.townHall.radius + 10) {
                 this.townHallHealth -= 10;
                 this.townHallHealthText.setText(`Rathaus: ${this.townHallHealth} HP`);
+                
+                if (!this.townHallHealthBar.visible) {
+                    this.townHallHealthBarBg.setVisible(true);
+                    this.townHallHealthBar.setVisible(true);
+                }
                 this.townHallHealthBar.scaleX = this.townHallHealth / this.townHall.maxHealth;
+                
                 enemy.toRemove = true;
                 return;
             }
@@ -525,6 +555,88 @@ class TowerDefenseGame extends Phaser.Scene {
         }).setOrigin(0.5);
         
         this.scene.pause();
+    }
+    
+    updateFarms(time) {
+        this.buildings.forEach(building => {
+            if (building.type === 'farm') {
+                if (time - building.lastProduction > building.productionRate) {
+                    this.currency += building.productionAmount;
+                    this.currencyText.setText(`Batzen: ${this.currency}`);
+                    building.lastProduction = time;
+                    
+                    const coinText = this.add.text(building.x, building.y - 40, `+${building.productionAmount}`, {
+                        fontSize: '14px',
+                        fill: '#ffd700',
+                        fontStyle: 'bold'
+                    }).setOrigin(0.5);
+                    
+                    this.tweens.add({
+                        targets: coinText,
+                        y: building.y - 60,
+                        alpha: 0,
+                        duration: 1500,
+                        onComplete: () => coinText.destroy()
+                    });
+                }
+            }
+        });
+    }
+    
+    selectExistingBuilding(x, y) {
+        let clickedBuilding = null;
+        let minDistance = 50;
+        
+        this.buildings.forEach(building => {
+            const distance = Math.sqrt(
+                (building.x - x) * (building.x - x) + 
+                (building.y - y) * (building.y - y)
+            );
+            
+            if (distance < minDistance) {
+                clickedBuilding = building;
+                minDistance = distance;
+            }
+        });
+        
+        if (clickedBuilding) {
+            if (this.selectedBuilding) {
+                this.deselectBuilding();
+            }
+            
+            this.selectedBuilding = clickedBuilding;
+            this.showBuildingInfo(clickedBuilding);
+            
+            if (clickedBuilding.type === 'tower') {
+                const rangeCircle = this.add.circle(clickedBuilding.x, clickedBuilding.y, clickedBuilding.range, 0xffff00, 0.2);
+                rangeCircle.setStrokeStyle(2, 0xffff00, 0.6);
+                clickedBuilding.rangeIndicator = rangeCircle;
+            }
+        } else {
+            this.deselectBuilding();
+        }
+    }
+    
+    showBuildingInfo(building) {
+        if (this.infoPanel) {
+            this.infoPanel.destroy();
+        }
+        
+        let infoText = '';
+        if (building.type === 'tower') {
+            infoText = `Turm\nReichweite: ${building.range}px\nSchaden: ${building.damage}\nHP: ${building.health}/${building.maxHealth}`;
+        } else if (building.type === 'farm') {
+            infoText = `Farm\n+${building.productionAmount} Batzen\nalle ${building.productionRate/1000} Sek\nHP: ${building.health}/${building.maxHealth}`;
+        } else if (building.type === 'factory') {
+            infoText = `Fabrik\n(noch keine Funktion)\nHP: ${building.health}/${building.maxHealth}`;
+        }
+        
+        this.infoPanel = this.add.text(building.x + 50, building.y - 30, infoText, {
+            fontSize: '12px',
+            fill: '#fff',
+            backgroundColor: '#000000',
+            padding: { x: 8, y: 6 }
+        }).setOrigin(0, 0.5);
     }
     
     showEnemyHealthBar(enemy) {

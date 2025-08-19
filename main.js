@@ -579,6 +579,35 @@ class TowerDefenseGame extends Phaser.Scene {
         });
     }
     
+    createFarmProgressBar(farm) {
+        const progressY = this.infoPanel.y + 35;
+        const progressX = this.infoPanel.x;
+        
+        farm.progressBarBg = this.add.rectangle(progressX + 50, progressY, 100, 8, 0x444444);
+        farm.progressBar = this.add.rectangle(progressX + 50, progressY, 100, 6, 0x00ff00);
+        
+        farm.progressBarBg.setOrigin(0.5, 0.5);
+        farm.progressBar.setOrigin(0, 0.5);
+    }
+    
+    updateFarmProgressBars(time) {
+        if (this.selectedBuilding && this.selectedBuilding.type === 'farm' && this.selectedBuilding.progressBar) {
+            const farm = this.selectedBuilding;
+            const timeSinceLastProduction = time - farm.lastProduction;
+            const progress = Math.min(timeSinceLastProduction / farm.productionRate, 1);
+            
+            farm.progressBar.scaleX = progress;
+            
+            if (progress < 0.5) {
+                farm.progressBar.setFillStyle(0xff0000);
+            } else if (progress < 0.8) {
+                farm.progressBar.setFillStyle(0xffff00);
+            } else {
+                farm.progressBar.setFillStyle(0x00ff00);
+            }
+        }
+    }
+    
     selectExistingBuilding(x, y) {
         let clickedBuilding = null;
         let minDistance = 50;

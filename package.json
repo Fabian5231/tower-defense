@@ -1,0 +1,18 @@
+{
+  "name": "tower-defense-game",
+  "version": "1.0.0",
+  "description": "A minimal tower defense game built with Phaser.js",
+  "main": "main.js",
+  "scripts": {
+    "dev": "npx http-server -p 3000"
+  },
+  "dependencies": {
+    "phaser": "^3.70.0"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  },
+  "keywords": ["tower-defense", "phaser", "game"],
+  "author": "",
+  "license": "MIT"
+}

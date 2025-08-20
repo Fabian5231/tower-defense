@@ -27,6 +27,15 @@ export default class BuildingMenu {
                 maxLevel: 3,
                 range: 80 // Direkte Range-Angabe (Level 1)
             },
+            werfer: {
+                cost: 50,
+                name: "Werfer",
+                symbol: "💥",
+                width: 1,
+                height: 1,
+                maxLevel: 3,
+                range: 150 // Massive Range!
+            },
             farm: {
                 cost: 10,
                 name: "Feld",

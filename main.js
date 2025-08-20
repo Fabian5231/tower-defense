@@ -37,9 +37,9 @@ class TowerDefenseGame extends Phaser.Scene {
         this.towerRangeCircles = [];
         this.hoverRangeCircle = null;
         this.buildingTypes = {
-            tower: { cost: 10, name: 'Turm', symbol: '🏯', width: 1, height: 1 },
-            farm: { cost: 10, name: 'Feld', symbol: '🌾', width: 1, height: 2 },
-            factory: { cost: 10, name: 'Fabrik', symbol: '🏭', width: 2, height: 1 }
+            tower: { cost: 10, name: 'Turm', symbol: '🏯', width: 1, height: 1, maxLevel: 3 },
+            farm: { cost: 10, name: 'Feld', symbol: '🌾', width: 1, height: 2, maxLevel: 3 },
+            factory: { cost: 10, name: 'Fabrik', symbol: '🏭', width: 2, height: 1, maxLevel: 3 }
         };
     }
     
@@ -250,6 +250,57 @@ class TowerDefenseGame extends Phaser.Scene {
     isWaveComplete() {
         return this.enemiesSpawned >= this.enemiesInWave && this.enemies.length === 0;
     }
+    
+    getUpgradeCost(buildingType, currentLevel) {
+        const baseCost = this.buildingTypes[buildingType].cost;
+        return Math.floor(baseCost * (currentLevel + 1) * 1.5); // Escalating cost
+    }
+    
+    upgradeBuilding(building) {
+        const maxLevel = this.buildingTypes[building.type].maxLevel;
+        if (building.level >= maxLevel) {
+            return; // Already at max level
+        }
+        
+        const upgradeCost = this.getUpgradeCost(building.type, building.level);
+        if (this.currency < upgradeCost) {
+            this.showInsufficientFundsMessage();
+            return;
+        }
+        
+        // Deduct cost and upgrade
+        this.currency -= upgradeCost;
+        this.currencyText.setText(`Batzen: ${this.currency}`);
+        building.level++;
+        
+        // Apply level-based improvements
+        this.applyLevelUpgrades(building);
+        
+        // Refresh info panel
+        this.showBuildingInfo(building);
+    }
+    
+    applyLevelUpgrades(building) {
+        const level = building.level;
+        
+        if (building.type === 'tower') {
+            // Increase damage and range
+            building.damage = 25 + ((level - 1) * 15); // Level 1: 25, Level 2: 40, Level 3: 55
+            building.range = 60 + ((level - 1) * 20);   // Level 1: 60, Level 2: 80, Level 3: 100
+            building.maxHealth = 75 + ((level - 1) * 25); // Level 1: 75, Level 2: 100, Level 3: 125
+            building.health = building.maxHealth; // Heal to full on upgrade
+        } else if (building.type === 'farm') {
+            // Increase production and reduce time
+            building.productionAmount = 5 + ((level - 1) * 3); // Level 1: 5, Level 2: 8, Level 3: 11
+            building.productionRate = Math.max(15000, 30000 - ((level - 1) * 7500)); // Level 1: 30s, Level 2: 22.5s, Level 3: 15s
+            building.maxHealth = 100 + ((level - 1) * 30); // Level 1: 100, Level 2: 130, Level 3: 160
+            building.health = building.maxHealth; // Heal to full on upgrade
+        } else if (building.type === 'factory') {
+            // Increase health (future: add factory functionality)
+            building.maxHealth = 150 + ((level - 1) * 50); // Level 1: 150, Level 2: 200, Level 3: 250
+            building.health = building.maxHealth; // Heal to full on upgrade
+        }
+    }
 
     preload() {
         this.load.image('pixel', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==');
@@ -296,6 +347,7 @@ class TowerDefenseGame extends Phaser.Scene {
         this.townHall = {
             x: townHallWorldPos.x,
             y: townHallWorldPos.y,
+            level: 1,
             health: this.townHallHealth,
             maxHealth: this.townHallHealth,
             radius: 45,
@@ -600,6 +652,7 @@ class TowerDefenseGame extends Phaser.Scene {
             gridWidth: dimensions.width,
             gridHeight: dimensions.height,
             rotation: rotation,
+            level: 1,
             health: 100,
             maxHealth: 100,
             type: 'farm',
@@ -632,6 +685,7 @@ class TowerDefenseGame extends Phaser.Scene {
             gridWidth: dimensions.width,
             gridHeight: dimensions.height,
             rotation: rotation,
+            level: 1,
             health: 150,
             maxHealth: 150,
             type: 'factory',
@@ -660,6 +714,7 @@ class TowerDefenseGame extends Phaser.Scene {
             gridWidth: this.buildingTypes.tower.width,
             gridHeight: this.buildingTypes.tower.height,
             rotation: rotation,
+            level: 1,
             health: 75,
             maxHealth: 75,
             range: 60,
@@ -1076,11 +1131,20 @@ class TowerDefenseGame extends Phaser.Scene {
         
         let infoText = '';
         if (building.type === 'tower') {
-            infoText = `Turm\nReichweite: ${building.range}px\nSchaden: ${building.damage}\nHP: ${building.health}/${building.maxHealth}`;
+            infoText = `Turm - Level ${building.level}\nReichweite: ${building.range}px\nSchaden: ${building.damage}\nHP: ${building.health}/${building.maxHealth}`;
         } else if (building.type === 'farm') {
-            infoText = `Farm\n+${building.productionAmount} Batzen alle ${building.productionRate / 1000} Sek\nHP: ${building.health}/${building.maxHealth}`;
+            infoText = `Farm - Level ${building.level}\n+${building.productionAmount} Batzen alle ${building.productionRate / 1000} Sek\nHP: ${building.health}/${building.maxHealth}`;
         } else if (building.type === 'factory') {
-            infoText = `Fabrik\n(noch keine Funktion)\nHP: ${building.health}/${building.maxHealth}`;
+            infoText = `Fabrik - Level ${building.level}\n(noch keine Funktion)\nHP: ${building.health}/${building.maxHealth}`;
+        }
+        
+        // Add upgrade button for all buildings
+        const maxLevel = this.buildingTypes[building.type].maxLevel;
+        if (building.level < maxLevel) {
+            const upgradeCost = this.getUpgradeCost(building.type, building.level);
+            infoText += `\n\n⬆️ Upgrade (${upgradeCost}B)`;
+        } else {
+            infoText += '\n\n✨ Max Level';
         }
         
         // Add rotation button for non-tower buildings integrated into the info panel
@@ -1101,40 +1165,50 @@ class TowerDefenseGame extends Phaser.Scene {
             padding: { x: 10, y: 8 }
         }).setOrigin(0, 0.5);
         
-        if (building.type !== 'tower') {
-            // Make the entire info panel clickable for rotation
-            this.infoPanel.setInteractive();
-            this.infoPanel.on('pointerdown', (pointer, localX, localY) => {
-                // Check if click is in the rotation area
+        // Make the entire info panel clickable for upgrades (and rotation for non-towers)
+        this.infoPanel.setInteractive();
+        this.infoPanel.on('pointerdown', (pointer, localX, localY) => {
                 const panelHeight = this.infoPanel.height;
                 const clickY = localY;
                 
-                // Different rotation areas based on building type due to different text lengths
-                let rotationAreaStart, rotationAreaEnd;
-                if (building.type === 'farm') {
-                    // Farm has more text (includes timer), so rotation button is in smaller middle area
-                    rotationAreaStart = panelHeight * 0.4;
-                    rotationAreaEnd = panelHeight * 0.6;
-                } else {
-                    // Factory has less text, so rotation button can be in larger bottom area
-                    rotationAreaStart = panelHeight * 0.65;
-                    rotationAreaEnd = panelHeight * 0.85;
+                // Upgrade area is always in the upper-middle (after building stats, before rotation/timer)
+                const upgradeAreaStart = panelHeight * 0.3;
+                const upgradeAreaEnd = panelHeight * 0.5;
+                
+                // Check for upgrade click first
+                if (clickY >= upgradeAreaStart && clickY <= upgradeAreaEnd) {
+                    this.upgradeBuilding(building);
+                    return;
                 }
                 
-                if (clickY >= rotationAreaStart && clickY <= rotationAreaEnd) {
-                    this.rotateBuilding(building);
-                    this.showBuildingInfo(building); // Refresh info panel
+                // Only check rotation for non-tower buildings
+                if (building.type !== 'tower') {
+                    // Different rotation areas based on building type due to different text lengths
+                    let rotationAreaStart, rotationAreaEnd;
+                    if (building.type === 'farm') {
+                        // Farm has more text (includes timer), so rotation button is in smaller area
+                        rotationAreaStart = panelHeight * 0.55;
+                        rotationAreaEnd = panelHeight * 0.75;
+                    } else {
+                        // Factory has less text, so rotation button can be in bottom area
+                        rotationAreaStart = panelHeight * 0.65;
+                        rotationAreaEnd = panelHeight * 0.85;
+                    }
+                    
+                    if (clickY >= rotationAreaStart && clickY <= rotationAreaEnd) {
+                        this.rotateBuilding(building);
+                        this.showBuildingInfo(building); // Refresh info panel
+                    }
                 }
-            });
-            
-            this.infoPanel.on('pointerover', () => {
-                this.infoPanel.setBackgroundColor('#111111'); // Slightly lighter on hover
-            });
-            
-            this.infoPanel.on('pointerout', () => {
-                this.infoPanel.setBackgroundColor('#000000'); // Back to original
-            });
-        }
+        });
+        
+        this.infoPanel.on('pointerover', () => {
+            this.infoPanel.setBackgroundColor('#111111'); // Slightly lighter on hover
+        });
+        
+        this.infoPanel.on('pointerout', () => {
+            this.infoPanel.setBackgroundColor('#000000'); // Back to original
+        });
         
         if (building.type === 'farm') {
             this.createFarmTimer(building);

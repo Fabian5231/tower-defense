@@ -35,6 +35,7 @@ class TowerDefenseGame extends Phaser.Scene {
         this.gridGraphics = null;
         this.selectedBuildingRotation = 0;
         this.towerRangeCircles = [];
+        this.hoverRangeCircle = null;
         this.buildingTypes = {
             tower: { cost: 10, name: 'Turm', symbol: '🏯', width: 1, height: 1 },
             farm: { cost: 10, name: 'Feld', symbol: '🌾', width: 1, height: 2 },
@@ -323,7 +324,7 @@ class TowerDefenseGame extends Phaser.Scene {
         const menuX = this.mapWidth - 200;
         const menuY = 20;
         
-        const menuBg = this.add.rectangle(menuX + 100, menuY + 140, 180, 260, 0x333333, 0.9);
+        const menuBg = this.add.rectangle(menuX + 100, menuY + 160, 180, 300, 0x333333, 0.9);
         menuBg.setStrokeStyle(2, 0x666666);
         
         this.add.text(menuX + 100, menuY + 30, 'Gebäude', { 
@@ -356,7 +357,7 @@ class TowerDefenseGame extends Phaser.Scene {
         let yOffset = 0;
         Object.keys(this.buildingTypes).forEach((type, index) => {
             const building = this.buildingTypes[type];
-            const buttonY = menuY + 90 + (yOffset * 50);
+            const buttonY = menuY + 110 + (yOffset * 50); // +20px mehr Abstand
             
             const button = this.add.rectangle(menuX + 100, buttonY, 160, 40, 0x4a4a4a, 0.9);
             button.setStrokeStyle(2, 0x666666);
@@ -455,6 +456,11 @@ class TowerDefenseGame extends Phaser.Scene {
             this.hoverGraphic.destroy();
             this.hoverGraphic = null;
         }
+        
+        if (this.hoverRangeCircle) {
+            this.hoverRangeCircle.destroy();
+            this.hoverRangeCircle = null;
+        }
     }
     
     handleClick(pointer) {
@@ -472,6 +478,9 @@ class TowerDefenseGame extends Phaser.Scene {
             if (this.hoverGraphic) {
                 this.hoverGraphic.setVisible(false);
             }
+            if (this.hoverRangeCircle) {
+                this.hoverRangeCircle.setVisible(false);
+            }
             return;
         }
         
@@ -483,6 +492,10 @@ class TowerDefenseGame extends Phaser.Scene {
     showBuildingPreview(x, y, type) {
         if (this.hoverGraphic) {
             this.hoverGraphic.destroy();
+        }
+        if (this.hoverRangeCircle) {
+            this.hoverRangeCircle.destroy();
+            this.hoverRangeCircle = null;
         }
         
         const building = this.buildingTypes[type];
@@ -505,6 +518,14 @@ class TowerDefenseGame extends Phaser.Scene {
         
         this.hoverGraphic = this.add.rectangle(worldPos.x, worldPos.y, displayWidth, displayHeight, color, alpha);
         this.hoverGraphic.setStrokeStyle(2, color, 0.8);
+        
+        // Show range preview for towers
+        if (type === 'tower') {
+            const towerRange = 60; // Default tower range
+            const rangeColor = canAfford && canPlace ? 0x00ff00 : 0xff0000;
+            this.hoverRangeCircle = this.add.circle(worldPos.x, worldPos.y, towerRange, rangeColor, 0.1);
+            this.hoverRangeCircle.setStrokeStyle(2, rangeColor, 0.3);
+        }
     }
 
     gridToWorldForBuilding(gridX, gridY, width, height) {

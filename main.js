@@ -305,7 +305,7 @@ class TowerDefenseGame extends Phaser.Scene {
             maxHealth: 75,
             range: 60,
             damage: 25,
-            fireRate: 1000,
+            fireRate: 500,
             lastFired: 0,
             type: 'tower',
             graphic: this.add.circle(x, y, 15, 0x00ff00),

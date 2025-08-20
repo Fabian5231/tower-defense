@@ -19,8 +19,13 @@ class TowerDefenseGame extends Phaser.Scene {
         this.gridHeight = Math.floor(this.mapHeight / this.gridSize);
         this.grid = Array(this.gridHeight).fill().map(() => Array(this.gridWidth).fill(false));
         
+        this.currentWave = 1;
+        this.enemiesInWave = 5;
+        this.enemiesSpawned = 0;
         this.enemySpawnTimer = 0;
         this.enemySpawnDelay = 2000;
+        this.baseEnemyHealth = 50;
+        this.baseEnemySpeed = 50;
         
         this.selectedBuildingType = null;
         this.hoverGraphic = null;
@@ -185,6 +190,48 @@ class TowerDefenseGame extends Phaser.Scene {
     }
 }
 
+    getWaveEnemyCount(wave) {
+        return Math.floor(5 + (wave * 2)); // Start at 5, increase by 2 each wave
+    }
+    
+    getWaveEnemyHealth(wave) {
+        return Math.floor(this.baseEnemyHealth + (wave * 15)); // +15 HP per wave
+    }
+    
+    getWaveEnemySpeed(wave) {
+        return Math.floor(this.baseEnemySpeed + (wave * 3)); // +3 speed per wave
+    }
+    
+    getBossHealth(wave) {
+        return Math.floor(this.getWaveEnemyHealth(wave) * 8); // Boss has 8x normal enemy health
+    }
+    
+    shouldSpawnBoss(wave) {
+        return wave % 10 === 0; // Boss every 10 waves
+    }
+    
+    startNextWave() {
+        this.currentWave++;
+        this.enemiesInWave = this.getWaveEnemyCount(this.currentWave);
+        this.enemiesSpawned = 0;
+        
+        // Add boss to enemy count if it's a boss wave
+        if (this.shouldSpawnBoss(this.currentWave)) {
+            this.enemiesInWave++; // Add one for the boss
+        }
+        
+        this.updateWaveUI();
+    }
+    
+    updateWaveUI() {
+        this.waveText.setText(`Welle: ${this.currentWave}`);
+        this.enemyCountText.setText(`Gegner: ${this.enemiesInWave - this.enemiesSpawned}/${this.enemiesInWave}`);
+    }
+    
+    isWaveComplete() {
+        return this.enemiesSpawned >= this.enemiesInWave && this.enemies.length === 0;
+    }
+
     preload() {
         this.load.image('pixel', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==');
     }
@@ -194,9 +241,15 @@ class TowerDefenseGame extends Phaser.Scene {
         this.townHallHealthText = this.add.text(10, 40, `Rathaus: ${this.townHallHealth} HP`, { fontSize: '18px', fill: '#ff6b6b' });
         this.scoreText = this.add.text(10, 65, `Punkte: ${this.score}`, { fontSize: '18px', fill: '#fff' });
         this.currencyText = this.add.text(10, 90, `Batzen: ${this.currency}`, { fontSize: '18px', fill: '#ffd700' });
+        this.waveText = this.add.text(10, 115, `Welle: ${this.currentWave}`, { fontSize: '18px', fill: '#00ff00' });
+        this.enemyCountText = this.add.text(10, 140, `Gegner: ${this.enemiesInWave - this.enemiesSpawned}/${this.enemiesInWave}`, { fontSize: '16px', fill: '#ffaa00' });
         
         this.createTownHall();
         this.createBuildingMenu();
+        
+        // Initialize first wave
+        this.enemiesInWave = this.getWaveEnemyCount(this.currentWave);
+        this.updateWaveUI();
         
         this.input.on('pointerdown', (pointer) => {
             this.handleClick(pointer);
@@ -594,30 +647,65 @@ class TowerDefenseGame extends Phaser.Scene {
         this.removeDeadObjects();
         this.removeDeadBuildings();
         
+        // Check for wave completion
+        if (this.isWaveComplete()) {
+            this.startNextWave();
+        }
+        
         if (this.townHallHealth <= 0) {
             this.gameOver();
         }
     }
     
     spawnEnemies(time) {
-        if (time - this.enemySpawnTimer > this.enemySpawnDelay) {
+        if (this.enemiesSpawned < this.enemiesInWave && time - this.enemySpawnTimer > this.enemySpawnDelay) {
             this.createEnemy();
+            this.enemiesSpawned++;
             this.enemySpawnTimer = time;
+            this.updateWaveUI();
         }
     }
     
     createEnemy() {
         const spawnPoint = this.getRandomSpawnPoint();
+        const isBoss = this.shouldSpawnBoss(this.currentWave) && this.enemiesSpawned === this.enemiesInWave - 1;
+        
+        let health, speed, size, color, goldReward;
+        
+        if (isBoss) {
+            health = this.getBossHealth(this.currentWave);
+            speed = Math.max(20, this.getWaveEnemySpeed(this.currentWave) - 20); // Bosses are slower
+            size = 35;
+            color = 0x800080; // Purple for boss
+            goldReward = 25; // Boss gives more gold
+        } else {
+            health = this.getWaveEnemyHealth(this.currentWave);
+            speed = this.getWaveEnemySpeed(this.currentWave);
+            size = 20;
+            color = 0xff0000; // Red for normal enemies
+            goldReward = 5;
+        }
+        
         const enemy = {
             x: spawnPoint.x,
             y: spawnPoint.y,
-            health: 50,
-            maxHealth: 50,
-            speed: 50,
-            graphic: this.add.rectangle(spawnPoint.x, spawnPoint.y, 20, 20, 0xff0000),
-            healthBarBg: this.add.rectangle(spawnPoint.x, spawnPoint.y - 15, 22, 6, 0x666666),
-            healthBar: this.add.rectangle(spawnPoint.x, spawnPoint.y - 15, 20, 4, 0x00ff00)
+            health: health,
+            maxHealth: health,
+            speed: speed,
+            isBoss: isBoss,
+            goldReward: goldReward,
+            graphic: this.add.rectangle(spawnPoint.x, spawnPoint.y, size, size, color),
+            healthBarBg: this.add.rectangle(spawnPoint.x, spawnPoint.y - (size/2 + 10), size + 2, 6, 0x666666),
+            healthBar: this.add.rectangle(spawnPoint.x, spawnPoint.y - (size/2 + 10), size, 4, 0x00ff00)
         };
+        
+        // Add boss indicator
+        if (isBoss) {
+            enemy.graphic.setStrokeStyle(3, 0xffff00); // Yellow outline for boss
+            enemy.bossSymbol = this.add.text(spawnPoint.x, spawnPoint.y, '👑', { 
+                fontSize: '16px' 
+            }).setOrigin(0.5);
+        }
         
         enemy.healthBarBg.setVisible(false);
         enemy.healthBar.setVisible(false);
@@ -682,9 +770,14 @@ class TowerDefenseGame extends Phaser.Scene {
             enemy.graphic.x = enemy.x;
             enemy.graphic.y = enemy.y;
             enemy.healthBarBg.x = enemy.x;
-            enemy.healthBarBg.y = enemy.y - 15;
+            enemy.healthBarBg.y = enemy.y - (enemy.isBoss ? 25 : 15);
             enemy.healthBar.x = enemy.x;
-            enemy.healthBar.y = enemy.y - 15;
+            enemy.healthBar.y = enemy.y - (enemy.isBoss ? 25 : 15);
+            
+            if (enemy.bossSymbol) {
+                enemy.bossSymbol.x = enemy.x;
+                enemy.bossSymbol.y = enemy.y;
+            }
             
             if (enemy.healthBar.visible) {
                 enemy.healthBar.scaleX = enemy.health / enemy.maxHealth;
@@ -776,8 +869,8 @@ class TowerDefenseGame extends Phaser.Scene {
                     
                     if (enemy.health <= 0) {
                         enemy.toRemove = true;
-                        this.score += 10;
-                        this.currency += 5;
+                        this.score += enemy.isBoss ? 50 : 10;
+                        this.currency += enemy.goldReward;
                         this.scoreText.setText(`Punkte: ${this.score}`);
                         this.currencyText.setText(`Batzen: ${this.currency}`);
                     }
@@ -792,6 +885,9 @@ class TowerDefenseGame extends Phaser.Scene {
                 enemy.graphic.destroy();
                 enemy.healthBarBg.destroy();
                 enemy.healthBar.destroy();
+                if (enemy.bossSymbol) {
+                    enemy.bossSymbol.destroy();
+                }
                 return false;
             }
             return true;

@@ -19,119 +19,264 @@ export default class BuildingMenu {
         
         this.elements = {};
         
+        // Layout-Konfiguration
+        this.layout = {
+            menuX: 1200 - 200, // mapWidth - 200
+            menuY: 50,
+            menuWidth: 180,
+            elementSpacing: 20,
+            buttonWidth: 160,
+            buttonHeight: 40,
+            smallButtonHeight: 30,
+            currentY: 0 // Wird beim Layout automatisch berechnet
+        };
+        
         this.createMenu();
     }
     
+    /**
+     * Erstellt das komplette Menü mit automatischem Layout-System
+     */
     createMenu() {
-        const menuX = 1200 - 200; // mapWidth - 200
-        const menuY = 50; // Mehr Abstand zum oberen Rand
-        const menuWidth = 180;
-        const menuHeight = 420; // Etwas höher für besseres Layout
-        const spacing = 20; // Einheitlicher vertikaler Abstand
+        // Reset Layout-Position
+        this.layout.currentY = this.layout.menuY + 30; // Start mit Padding
         
-        // Menu background
-        const menuBg = this.scene.add.rectangle(menuX + 100, menuY + menuHeight/2, menuWidth, menuHeight, 0x333333, 0.9);
+        // Definiere Menü-Elemente in der gewünschten Reihenfolge
+        const menuElements = [
+            { type: 'title', text: 'Gebäude', fontSize: '20px', fontStyle: 'bold' },
+            { type: 'spacer', height: 10 }, // Zusätzlicher Abstand nach Titel
+            { type: 'button', id: 'grid', text: 'Raster: AUS', width: this.layout.buttonWidth, height: this.layout.smallButtonHeight, onClick: () => this.toggleGrid() },
+            { type: 'spacer', height: 5 }, // Kleinerer Abstand vor Building-Buttons
+            ...this.createBuildingMenuElements(), // Dynamisch generierte Building-Buttons
+            { type: 'spacer', height: 5 }, // Abstand vor Speed-Controls
+            { type: 'button-pair', 
+              left: { id: 'pause', text: '⏸️ Pause', onClick: () => this.togglePause() },
+              right: { id: 'speed', text: `${this.gameSpeed}x`, onClick: () => this.changeSpeed() }
+            }
+        ];
+        
+        // Berechne die benötigte Menü-Höhe
+        const menuHeight = this.calculateMenuHeight(menuElements) + 60; // +60 für Padding
+        
+        // Erstelle Menü-Hintergrund
+        this.createMenuBackground(menuHeight);
+        
+        // Erstelle alle Menü-Elemente automatisch
+        this.renderMenuElements(menuElements);
+    }
+    
+    /**
+     * Berechnet die benötigte Höhe für das Menü basierend auf den Elementen
+     */
+    calculateMenuHeight(elements) {
+        let totalHeight = 0;
+        elements.forEach(element => {
+            switch (element.type) {
+                case 'title':
+                    totalHeight += 25; // Geschätzte Texthöhe
+                    break;
+                case 'button':
+                    totalHeight += element.height;
+                    break;
+                case 'button-pair':
+                    totalHeight += this.layout.smallButtonHeight;
+                    break;
+                case 'spacer':
+                    totalHeight += element.height;
+                    break;
+            }
+            if (element.type !== 'spacer') {
+                totalHeight += this.layout.elementSpacing; // Standard-Abstand
+            }
+        });
+        return totalHeight;
+    }
+    
+    /**
+     * Erstellt den Menü-Hintergrund
+     */
+    createMenuBackground(menuHeight) {
+        const menuBg = this.scene.add.rectangle(
+            this.layout.menuX + 100, 
+            this.layout.menuY + menuHeight/2, 
+            this.layout.menuWidth, 
+            menuHeight, 
+            0x333333, 
+            0.9
+        );
         menuBg.setStrokeStyle(2, 0x666666);
-        
-        // Layout-Positionen berechnen
-        const titleY = menuY + 30;
-        const gridButtonY = titleY + spacing + 15; // 15px für halbe Texthöhe + spacing
-        const buildingButtonsStartY = gridButtonY + spacing + 15; // Nach Grid-Button
-        const speedControlsY = buildingButtonsStartY + (3 * 50) + spacing; // Nach 3 Building-Buttons
-        
-        // Menu title
-        this.scene.add.text(menuX + 100, titleY, 'Gebäude', { 
-            fontSize: '20px', 
+    }
+    
+    /**
+     * Generiert Menü-Elemente für alle Building-Buttons
+     */
+    createBuildingMenuElements() {
+        return Object.keys(this.buildingTypes).map(type => {
+            const building = this.buildingTypes[type];
+            return {
+                type: 'building-button',
+                buildingType: type,
+                label: `${building.symbol} ${building.name}`,
+                cost: `${building.cost}B`,
+                width: this.layout.buttonWidth,
+                height: this.layout.buttonHeight,
+                onClick: () => this.selectBuilding(type)
+            };
+        });
+    }
+    
+    /**
+     * Rendert alle Menü-Elemente automatisch
+     */
+    renderMenuElements(elements) {
+        elements.forEach(element => {
+            switch (element.type) {
+                case 'title':
+                    this.renderTitle(element);
+                    break;
+                case 'button':
+                    this.renderButton(element);
+                    break;
+                case 'building-button':
+                    this.renderBuildingButton(element);
+                    break;
+                case 'button-pair':
+                    this.renderButtonPair(element);
+                    break;
+                case 'spacer':
+                    this.renderSpacer(element);
+                    break;
+            }
+        });
+    }
+    
+    /**
+     * Rendert einen Titel
+     */
+    renderTitle(element) {
+        this.scene.add.text(this.layout.menuX + 100, this.layout.currentY, element.text, {
+            fontSize: element.fontSize,
             fill: '#fff',
-            fontStyle: 'bold'
+            fontStyle: element.fontStyle || 'normal'
         }).setOrigin(0.5);
         
-        // Grid toggle button
-        this.createGridButton(menuX, gridButtonY);
-        
-        // Building buttons (mit einheitlichem Abstand)
-        this.createBuildingButtons(menuX, buildingButtonsStartY, spacing);
-        
-        // Speed control section (in einer Zeile)
-        this.createSpeedControls(menuX, speedControlsY);
+        this.layout.currentY += 25 + this.layout.elementSpacing; // Texthöhe + Abstand
     }
     
-    createGridButton(menuX, gridButtonY) {
-        const gridButton = this.scene.add.rectangle(menuX + 100, gridButtonY, 160, 30, 0x4a4a4a, 0.9);
-        gridButton.setStrokeStyle(2, 0x666666);
-        gridButton.setInteractive();
+    /**
+     * Rendert einen Standard-Button
+     */
+    renderButton(element) {
+        const button = this.scene.add.rectangle(
+            this.layout.menuX + 100, 
+            this.layout.currentY, 
+            element.width, 
+            element.height, 
+            0x4a4a4a, 
+            0.9
+        );
+        button.setStrokeStyle(2, 0x666666);
+        button.setInteractive();
         
-        this.elements.gridButtonText = this.scene.add.text(menuX + 100, gridButtonY, 'Raster: AUS', { 
-            fontSize: '14px', 
-            fill: '#fff' 
-        }).setOrigin(0.5);
+        const text = this.scene.add.text(
+            this.layout.menuX + 100, 
+            this.layout.currentY, 
+            element.text, 
+            { fontSize: '14px', fill: '#fff' }
+        ).setOrigin(0.5);
         
-        gridButton.on('pointerdown', () => {
-            this.toggleGrid();
-        });
+        // Events
+        button.on('pointerdown', element.onClick);
+        button.on('pointerover', () => button.setFillStyle(0x5a5a5a));
+        button.on('pointerout', () => button.setFillStyle(0x4a4a4a));
         
-        gridButton.on('pointerover', () => {
-            gridButton.setFillStyle(0x5a5a5a);
-        });
+        // Speichere Element für spätere Updates
+        if (element.id) {
+            this.elements[element.id + 'Text'] = text;
+        }
         
-        gridButton.on('pointerout', () => {
-            gridButton.setFillStyle(0x4a4a4a);
-        });
+        this.layout.currentY += element.height + this.layout.elementSpacing;
     }
     
-    createSpeedControls(menuX, speedControlsY) {
-        const buttonWidth = 75; // 50% der 160px verfügbaren Breite (minus 5px Abstand in der Mitte)
-        const buttonHeight = 30; // Gleiche Höhe wie Grid-Button
-        const buttonSpacing = 10; // Abstand zwischen den beiden Buttons
+    /**
+     * Rendert einen Building-Button mit Label und Kosten
+     */
+    renderBuildingButton(element) {
+        const buttonObj = this.createButton(
+            this.layout.menuX + 100,
+            this.layout.currentY,
+            element.width,
+            element.height,
+            element.label,
+            element.cost,
+            element.onClick
+        );
         
-        // Berechne Positionen für zwei Buttons nebeneinander
-        const leftButtonX = menuX + 100 - (buttonWidth/2 + buttonSpacing/2);
-        const rightButtonX = menuX + 100 + (buttonWidth/2 + buttonSpacing/2);
+        // Speichere Button-Komponenten
+        const building = this.buildingTypes[element.buildingType];
+        building.button = buttonObj.background;
+        building.buttonText = buttonObj.labelText;
+        building.costText = buttonObj.costText;
+        building.buttonObj = buttonObj;
         
-        // Pause button (links)
-        const pauseButton = this.scene.add.rectangle(leftButtonX, speedControlsY, buttonWidth, buttonHeight, 0x4a4a4a, 0.9);
-        pauseButton.setStrokeStyle(1, 0x666666);
-        pauseButton.setInteractive();
-        
-        this.elements.pauseButtonText = this.scene.add.text(leftButtonX, speedControlsY, '⏸️ Pause', { 
-            fontSize: '10px', 
-            fill: '#fff' 
-        }).setOrigin(0.5);
-        
-        pauseButton.on('pointerdown', () => {
-            this.togglePause();
-        });
-        
-        pauseButton.on('pointerover', () => {
-            pauseButton.setFillStyle(0x5a5a5a);
-        });
-        
-        pauseButton.on('pointerout', () => {
-            pauseButton.setFillStyle(0x4a4a4a);
-        });
-        
-        // Speed button (rechts)
-        const speedButton = this.scene.add.rectangle(rightButtonX, speedControlsY, buttonWidth, buttonHeight, 0x4a4a4a, 0.9);
-        speedButton.setStrokeStyle(1, 0x666666);
-        speedButton.setInteractive();
-        
-        this.elements.speedButtonText = this.scene.add.text(rightButtonX, speedControlsY, `${this.gameSpeed}x`, { 
-            fontSize: '10px', 
-            fill: '#fff' 
-        }).setOrigin(0.5);
-        
-        speedButton.on('pointerdown', () => {
-            this.changeSpeed();
-        });
-        
-        speedButton.on('pointerover', () => {
-            speedButton.setFillStyle(0x5a5a5a);
-        });
-        
-        speedButton.on('pointerout', () => {
-            speedButton.setFillStyle(0x4a4a4a);
-        });
+        this.layout.currentY += element.height + this.layout.elementSpacing;
     }
+    
+    /**
+     * Rendert ein Button-Paar (nebeneinander)
+     */
+    renderButtonPair(element) {
+        const buttonWidth = 75; // 50% der verfügbaren Breite
+        const buttonSpacing = 10;
+        const leftX = this.layout.menuX + 100 - (buttonWidth/2 + buttonSpacing/2);
+        const rightX = this.layout.menuX + 100 + (buttonWidth/2 + buttonSpacing/2);
+        
+        // Linker Button
+        const leftButton = this.scene.add.rectangle(
+            leftX, this.layout.currentY, buttonWidth, this.layout.smallButtonHeight, 0x4a4a4a, 0.9
+        );
+        leftButton.setStrokeStyle(1, 0x666666);
+        leftButton.setInteractive();
+        
+        const leftText = this.scene.add.text(leftX, this.layout.currentY, element.left.text, {
+            fontSize: '10px', fill: '#fff'
+        }).setOrigin(0.5);
+        
+        // Rechter Button
+        const rightButton = this.scene.add.rectangle(
+            rightX, this.layout.currentY, buttonWidth, this.layout.smallButtonHeight, 0x4a4a4a, 0.9
+        );
+        rightButton.setStrokeStyle(1, 0x666666);
+        rightButton.setInteractive();
+        
+        const rightText = this.scene.add.text(rightX, this.layout.currentY, element.right.text, {
+            fontSize: '10px', fill: '#fff'
+        }).setOrigin(0.5);
+        
+        // Events für linken Button
+        leftButton.on('pointerdown', element.left.onClick);
+        leftButton.on('pointerover', () => leftButton.setFillStyle(0x5a5a5a));
+        leftButton.on('pointerout', () => leftButton.setFillStyle(0x4a4a4a));
+        
+        // Events für rechten Button
+        rightButton.on('pointerdown', element.right.onClick);
+        rightButton.on('pointerover', () => rightButton.setFillStyle(0x5a5a5a));
+        rightButton.on('pointerout', () => rightButton.setFillStyle(0x4a4a4a));
+        
+        // Speichere Referenzen
+        if (element.left.id) this.elements[element.left.id + 'Text'] = leftText;
+        if (element.right.id) this.elements[element.right.id + 'Text'] = rightText;
+        
+        this.layout.currentY += this.layout.smallButtonHeight + this.layout.elementSpacing;
+    }
+    
+    /**
+     * Rendert einen Spacer (unsichtbarer Abstand)
+     */
+    renderSpacer(element) {
+        this.layout.currentY += element.height;
+    }
+    
     
     /**
      * Creates a standardized button with background, label and cost text
@@ -209,36 +354,6 @@ export default class BuildingMenu {
         };
     }
 
-    createBuildingButtons(menuX, buildingButtonsStartY, spacing) {
-        const buttonWidth = 160;
-        const buttonHeight = 40;
-        const buttonSpacing = buttonHeight + spacing; // Button-Höhe + einheitlicher Abstand
-        
-        let yOffset = 0;
-        Object.keys(this.buildingTypes).forEach((type) => {
-            const building = this.buildingTypes[type];
-            const buttonY = buildingButtonsStartY + (yOffset * buttonSpacing);
-            
-            // Create button using the new helper function
-            const buttonObj = this.createButton(
-                menuX + 100, // X position (centered in menu)
-                buttonY,     // Y position
-                buttonWidth, // Width
-                buttonHeight, // Height
-                `${building.symbol} ${building.name}`, // Label
-                `${building.cost}B`, // Cost
-                () => this.selectBuilding(type) // Click handler
-            );
-            
-            // Store button components for later access
-            this.buildingTypes[type].button = buttonObj.background;
-            this.buildingTypes[type].buttonText = buttonObj.labelText;
-            this.buildingTypes[type].costText = buttonObj.costText;
-            this.buildingTypes[type].buttonObj = buttonObj; // Store complete button object
-            
-            yOffset++;
-        });
-    }
     
     selectBuilding(type) {
         // Deselect previously selected building
@@ -271,7 +386,9 @@ export default class BuildingMenu {
     
     toggleGrid() {
         this.showGrid = !this.showGrid;
-        this.elements.gridButtonText.setText(`Raster: ${this.showGrid ? 'AN' : 'AUS'}`);
+        if (this.elements.gridText) {
+            this.elements.gridText.setText(`Raster: ${this.showGrid ? 'AN' : 'AUS'}`);
+        }
         this.onToggleGrid(this.showGrid);
     }
     
@@ -287,12 +404,16 @@ export default class BuildingMenu {
     
     updateSpeedDisplay(gameSpeed) {
         this.gameSpeed = gameSpeed;
-        this.elements.speedButtonText.setText(`${this.gameSpeed}x`);
+        if (this.elements.speedText) {
+            this.elements.speedText.setText(`${this.gameSpeed}x`);
+        }
     }
     
     updatePauseDisplay(isPaused) {
         this.isPaused = isPaused;
-        this.elements.pauseButtonText.setText(this.isPaused ? '▶️ Weiter' : '⏸️ Pause');
+        if (this.elements.pauseText) {
+            this.elements.pauseText.setText(this.isPaused ? '▶️ Weiter' : '⏸️ Pause');
+        }
     }
     
     getBuildingType(type) {

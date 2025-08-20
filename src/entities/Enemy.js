@@ -73,13 +73,8 @@ export default class Enemy {
             return { hitTownHall: true, damage: 10 };
         }
         
-        // Use pathfinding if available
-        if (pathfindingManager && terrainManager) {
-            this.updateWithPathfinding(delta, townHall, gameSpeed, terrainManager, pathfindingManager);
-        } else {
-            // Fallback to direct movement
-            this.updateDirectMovement(delta, townHall, gameSpeed, terrainManager);
-        }
+        // Temporarily disable pathfinding and use simple terrain-aware movement
+        this.updateTerrainAwareMovement(delta, townHall, gameSpeed, terrainManager);
         
         this.updateGraphics();
         
@@ -221,6 +216,160 @@ export default class Enemy {
         // If all directions are blocked, try moving backwards
         this.x -= direction.x * effectiveSpeed * (delta / 1000) * 0.3;
         this.y -= direction.y * effectiveSpeed * (delta / 1000) * 0.3;
+    }
+    
+    updateTerrainAwareMovement(delta, townHall, gameSpeed, terrainManager) {
+        const direction = {
+            x: townHall.x - this.x,
+            y: townHall.y - this.y
+        };
+        const distance = Math.sqrt(direction.x * direction.x + direction.y * direction.y);
+        
+        // Normalize direction
+        direction.x /= distance;
+        direction.y /= distance;
+        
+        // Check if current position is blocked
+        const currentGridX = Math.floor(this.x / 30);
+        const currentGridY = Math.floor(this.y / 30);
+        let currentModifier = 1.0;
+        
+        if (terrainManager) {
+            currentModifier = terrainManager.getMovementModifier(currentGridX, currentGridY);
+        }
+        
+        // If we're stuck on a mountain, use smart escape logic
+        if (currentModifier === 0) {
+            this.escapeFromMountain(delta, townHall, gameSpeed, terrainManager);
+            return;
+        }
+        
+        // Check if the next position would be blocked
+        const nextX = this.x + direction.x * 20; // Look ahead 20 pixels
+        const nextY = this.y + direction.y * 20;
+        const nextGridX = Math.floor(nextX / 30);
+        const nextGridY = Math.floor(nextY / 30);
+        
+        let nextModifier = 1.0;
+        if (terrainManager) {
+            nextModifier = terrainManager.getMovementModifier(nextGridX, nextGridY);
+        }
+        
+        // If next position would be blocked, use avoidance
+        if (nextModifier === 0) {
+            this.avoidMountainAhead(direction, delta, townHall, gameSpeed, terrainManager);
+            return;
+        }
+        
+        // Normal movement with terrain modifier
+        let effectiveSpeed = this.speed * gameSpeed * currentModifier;
+        this.x += direction.x * effectiveSpeed * (delta / 1000);
+        this.y += direction.y * effectiveSpeed * (delta / 1000);
+    }
+    
+    escapeFromMountain(delta, townHall, gameSpeed, terrainManager) {
+        // If we're stuck in a mountain, try to escape in all directions
+        const escapeDirections = [
+            { x: 1, y: 0 },   // right
+            { x: -1, y: 0 },  // left
+            { x: 0, y: 1 },   // down
+            { x: 0, y: -1 },  // up
+            { x: 1, y: 1 },   // down-right
+            { x: -1, y: 1 },  // down-left
+            { x: 1, y: -1 },  // up-right
+            { x: -1, y: -1 }  // up-left
+        ];
+        
+        let effectiveSpeed = this.speed * gameSpeed;
+        
+        for (const dir of escapeDirections) {
+            const testX = this.x + dir.x * 15;
+            const testY = this.y + dir.y * 15;
+            const testGridX = Math.floor(testX / 30);
+            const testGridY = Math.floor(testY / 30);
+            
+            if (terrainManager.getMovementModifier(testGridX, testGridY) > 0) {
+                // Found an escape direction
+                this.x += dir.x * effectiveSpeed * (delta / 1000) * 0.8;
+                this.y += dir.y * effectiveSpeed * (delta / 1000) * 0.8;
+                return;
+            }
+        }
+        
+        // If completely surrounded, try to move toward the nearest edge
+        const mapCenterX = 600; // mapWidth / 2
+        const mapCenterY = 400; // mapHeight / 2
+        const awayFromCenter = {
+            x: this.x - mapCenterX,
+            y: this.y - mapCenterY
+        };
+        const awayDistance = Math.sqrt(awayFromCenter.x * awayFromCenter.x + awayFromCenter.y * awayFromCenter.y);
+        
+        if (awayDistance > 0) {
+            awayFromCenter.x /= awayDistance;
+            awayFromCenter.y /= awayDistance;
+            
+            this.x += awayFromCenter.x * effectiveSpeed * (delta / 1000) * 0.5;
+            this.y += awayFromCenter.y * effectiveSpeed * (delta / 1000) * 0.5;
+        }
+    }
+    
+    avoidMountainAhead(direction, delta, townHall, gameSpeed, terrainManager) {
+        // Try perpendicular directions to go around the obstacle
+        const perpDirections = [
+            { x: -direction.y, y: direction.x },  // perpendicular left
+            { x: direction.y, y: -direction.x }   // perpendicular right
+        ];
+        
+        let effectiveSpeed = this.speed * gameSpeed;
+        
+        // Test both perpendicular directions
+        for (const perpDir of perpDirections) {
+            const testX = this.x + perpDir.x * 20;
+            const testY = this.y + perpDir.y * 20;
+            const testGridX = Math.floor(testX / 30);
+            const testGridY = Math.floor(testY / 30);
+            
+            if (terrainManager.getMovementModifier(testGridX, testGridY) > 0) {
+                // This direction is clear, go around the obstacle
+                // Mix the perpendicular direction with a bit of forward movement
+                const mixedX = perpDir.x * 0.7 + direction.x * 0.3;
+                const mixedY = perpDir.y * 0.7 + direction.y * 0.3;
+                
+                this.x += mixedX * effectiveSpeed * (delta / 1000);
+                this.y += mixedY * effectiveSpeed * (delta / 1000);
+                return;
+            }
+        }
+        
+        // If both perpendicular directions are blocked, try diagonal backwards
+        const backwardDirections = [
+            { x: -direction.x + perpDirections[0].x, y: -direction.y + perpDirections[0].y },
+            { x: -direction.x + perpDirections[1].x, y: -direction.y + perpDirections[1].y }
+        ];
+        
+        for (const backDir of backwardDirections) {
+            const length = Math.sqrt(backDir.x * backDir.x + backDir.y * backDir.y);
+            if (length > 0) {
+                backDir.x /= length;
+                backDir.y /= length;
+                
+                const testX = this.x + backDir.x * 20;
+                const testY = this.y + backDir.y * 20;
+                const testGridX = Math.floor(testX / 30);
+                const testGridY = Math.floor(testY / 30);
+                
+                if (terrainManager.getMovementModifier(testGridX, testGridY) > 0) {
+                    this.x += backDir.x * effectiveSpeed * (delta / 1000) * 0.6;
+                    this.y += backDir.y * effectiveSpeed * (delta / 1000) * 0.6;
+                    return;
+                }
+            }
+        }
+        
+        // Last resort: move backwards
+        this.x -= direction.x * effectiveSpeed * (delta / 1000) * 0.4;
+        this.y -= direction.y * effectiveSpeed * (delta / 1000) * 0.4;
     }
     
     updateGraphics() {

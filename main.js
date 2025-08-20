@@ -27,6 +27,11 @@ class TowerDefenseGame extends Phaser.Scene {
         this.baseEnemyHealth = 50;
         this.baseEnemySpeed = 50;
         
+        this.gameSpeed = 1.0;
+        this.isPaused = false;
+        this.speedLevels = [0.5, 1.0, 2.0, 3.0];
+        this.currentSpeedIndex = 1;
+        
         this.selectedBuildingType = null;
         this.hoverGraphic = null;
         this.selectedBuilding = null;
@@ -156,6 +161,42 @@ class TowerDefenseGame extends Phaser.Scene {
         return { width: building.width, height: building.height };
     }
     
+    togglePause() {
+        this.isPaused = !this.isPaused;
+        this.pauseButtonText.setText(this.isPaused ? '▶️ Weiter' : '⏸️ Pause');
+        
+        if (this.isPaused) {
+            this.scene.pause();
+        } else {
+            this.scene.resume();
+        }
+    }
+    
+    changeSpeed() {
+        if (this.isPaused) return;
+        
+        this.currentSpeedIndex = (this.currentSpeedIndex + 1) % this.speedLevels.length;
+        this.gameSpeed = this.speedLevels[this.currentSpeedIndex];
+        this.speedButtonText.setText(`${this.gameSpeed}x`);
+        
+        // Update physics time scale
+        this.physics.world.timeScale = this.gameSpeed;
+    }
+    
+    setSpeed(speed) {
+        if (this.isPaused) return;
+        
+        const speedIndex = this.speedLevels.indexOf(speed);
+        if (speedIndex !== -1) {
+            this.currentSpeedIndex = speedIndex;
+            this.gameSpeed = speed;
+            this.speedButtonText.setText(`${this.gameSpeed}x`);
+            
+            // Update physics time scale
+            this.physics.world.timeScale = this.gameSpeed;
+        }
+    }
+
     rotateBuilding(building) {
     if (building.type === 'tower') {
         return; // Towers are square, no need to rotate
@@ -411,6 +452,27 @@ class TowerDefenseGame extends Phaser.Scene {
                 this.selectedBuildingRotation = (this.selectedBuildingRotation + 90) % 360;
             }
         });
+        
+        // Speed control keyboard shortcuts
+        this.input.keyboard.on('keydown-SPACE', () => {
+            this.togglePause();
+        });
+        
+        this.input.keyboard.on('keydown-ONE', () => {
+            this.setSpeed(0.5);
+        });
+        
+        this.input.keyboard.on('keydown-TWO', () => {
+            this.setSpeed(1.0);
+        });
+        
+        this.input.keyboard.on('keydown-THREE', () => {
+            this.setSpeed(2.0);
+        });
+        
+        this.input.keyboard.on('keydown-FOUR', () => {
+            this.setSpeed(3.0);
+        });
     }
     
     createTownHall() {
@@ -493,6 +555,57 @@ class TowerDefenseGame extends Phaser.Scene {
         
         gridButton.on('pointerout', () => {
             gridButton.setFillStyle(0x4a4a4a);
+        });
+        
+        // Speed control section
+        this.add.text(menuX + 100, menuY + 290, 'Geschwindigkeit', { 
+            fontSize: '16px', 
+            fill: '#fff',
+            fontStyle: 'bold'
+        }).setOrigin(0.5);
+        
+        // Pause button
+        const pauseButton = this.add.rectangle(menuX + 50, menuY + 315, 70, 25, 0x4a4a4a, 0.9);
+        pauseButton.setStrokeStyle(1, 0x666666);
+        pauseButton.setInteractive();
+        
+        this.pauseButtonText = this.add.text(menuX + 50, menuY + 315, '⏸️ Pause', { 
+            fontSize: '10px', 
+            fill: '#fff' 
+        }).setOrigin(0.5);
+        
+        pauseButton.on('pointerdown', () => {
+            this.togglePause();
+        });
+        
+        pauseButton.on('pointerover', () => {
+            pauseButton.setFillStyle(0x5a5a5a);
+        });
+        
+        pauseButton.on('pointerout', () => {
+            pauseButton.setFillStyle(0x4a4a4a);
+        });
+        
+        // Speed buttons
+        const speedButton = this.add.rectangle(menuX + 150, menuY + 315, 70, 25, 0x4a4a4a, 0.9);
+        speedButton.setStrokeStyle(1, 0x666666);
+        speedButton.setInteractive();
+        
+        this.speedButtonText = this.add.text(menuX + 150, menuY + 315, `${this.gameSpeed}x`, { 
+            fontSize: '10px', 
+            fill: '#fff' 
+        }).setOrigin(0.5);
+        
+        speedButton.on('pointerdown', () => {
+            this.changeSpeed();
+        });
+        
+        speedButton.on('pointerover', () => {
+            speedButton.setFillStyle(0x5a5a5a);
+        });
+        
+        speedButton.on('pointerout', () => {
+            speedButton.setFillStyle(0x4a4a4a);
         });
         
         let yOffset = 0;
@@ -801,14 +914,19 @@ class TowerDefenseGame extends Phaser.Scene {
     }
     
     update(time, delta) {
-        this.spawnEnemies(time);
-        this.moveEnemies(delta);
-        this.updateTowers(time);
+        if (this.isPaused) return;
+        
+        const scaledDelta = delta * this.gameSpeed;
+        const scaledTime = time; // time is absolute, but we'll use scaledDelta for movements
+        
+        this.spawnEnemies(scaledTime);
+        this.moveEnemies(scaledDelta);
+        this.updateTowers(scaledTime);
         this.updateSupplyChains(); // Update supply chains every frame
-        this.updateFarms(time);
-        this.updateFactories(time);
-        this.updateFarmTimer(time);
-        this.moveProjectiles(delta);
+        this.updateFarms(scaledTime);
+        this.updateFactories(scaledTime);
+        this.updateFarmTimer(scaledTime);
+        this.moveProjectiles(scaledDelta);
         this.checkCollisions();
         this.removeDeadObjects();
         this.removeDeadBuildings();
@@ -824,7 +942,8 @@ class TowerDefenseGame extends Phaser.Scene {
     }
     
     spawnEnemies(time) {
-        if (this.enemiesSpawned < this.enemiesInWave && time - this.enemySpawnTimer > this.enemySpawnDelay) {
+        const adjustedSpawnDelay = this.enemySpawnDelay / this.gameSpeed;
+        if (this.enemiesSpawned < this.enemiesInWave && time - this.enemySpawnTimer > adjustedSpawnDelay) {
             this.createEnemy();
             this.enemiesSpawned++;
             this.enemySpawnTimer = time;
@@ -953,7 +1072,8 @@ class TowerDefenseGame extends Phaser.Scene {
     
     updateTowers(time) {
         this.towers.forEach(tower => {
-            if (time - tower.lastFired > tower.fireRate) {
+            const adjustedFireRate = tower.fireRate / this.gameSpeed;
+            if (time - tower.lastFired > adjustedFireRate) {
                 const target = this.findNearestEnemy(tower);
                 if (target) {
                     this.fireTower(tower, target);
@@ -1108,7 +1228,8 @@ class TowerDefenseGame extends Phaser.Scene {
         this.buildings.forEach(building => {
             if (building.type === 'farm' && !building.suppliesFactory) {
                 // Only produce gold if farm is not supplying a factory
-                if (time - building.lastProduction > building.productionRate) {
+                const adjustedProductionRate = building.productionRate / this.gameSpeed;
+                if (time - building.lastProduction > adjustedProductionRate) {
                     this.currency += building.productionAmount;
                     this.currencyText.setText(`Batzen: ${this.currency}`);
                     building.lastProduction = time;
@@ -1135,7 +1256,8 @@ class TowerDefenseGame extends Phaser.Scene {
         this.buildings.forEach(building => {
             if (building.type === 'factory' && building.productionAmount > 0) {
                 // Only produce if factory has suppliers
-                if (time - building.lastProduction > building.productionRate) {
+                const adjustedProductionRate = building.productionRate / this.gameSpeed;
+                if (time - building.lastProduction > adjustedProductionRate) {
                     this.currency += building.productionAmount;
                     this.currencyText.setText(`Batzen: ${this.currency}`);
                     building.lastProduction = time;
@@ -1168,7 +1290,8 @@ class TowerDefenseGame extends Phaser.Scene {
             // Only show timer for farms that are not supplying factories
             const farm = this.selectedBuilding;
             const timeSinceLastProduction = time - farm.lastProduction;
-            const timeRemaining = Math.max(0, farm.productionRate - timeSinceLastProduction);
+            const adjustedProductionRate = farm.productionRate / this.gameSpeed;
+            const timeRemaining = Math.max(0, adjustedProductionRate - timeSinceLastProduction);
             const secondsRemaining = Math.ceil(timeRemaining / 1000);
             
             let timerInfo = '';

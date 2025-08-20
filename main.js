@@ -1109,16 +1109,9 @@ class TowerDefenseGame extends Phaser.Scene {
                 const panelHeight = this.infoPanel.height;
                 const clickY = localY;
                 
-                // For farms, rotation area is in the middle (after building info, before timer)
-                // For other buildings, rotation area is at the bottom
-                let rotationAreaStart, rotationAreaEnd;
-                if (building.type === 'farm') {
-                    rotationAreaStart = panelHeight * 0.45; // Middle area for farms
-                    rotationAreaEnd = panelHeight * 0.65;
-                } else {
-                    rotationAreaStart = panelHeight * 0.7; // Bottom area for other buildings
-                    rotationAreaEnd = panelHeight;
-                }
+                // Rotation area is in the middle for all non-tower buildings
+                const rotationAreaStart = panelHeight * 0.45; // Middle area
+                const rotationAreaEnd = panelHeight * 0.65;
                 
                 if (clickY >= rotationAreaStart && clickY <= rotationAreaEnd) {
                     this.rotateBuilding(building);

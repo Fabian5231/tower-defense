@@ -116,62 +116,139 @@ export default class BuildingMenu {
         });
     }
     
+    /**
+     * Creates a standardized button with background, label and cost text
+     * @param {number} x - Center X position of the button
+     * @param {number} y - Center Y position of the button  
+     * @param {number} width - Button width
+     * @param {number} height - Button height
+     * @param {string} label - Left-aligned label text (e.g., "🏯 Turm")
+     * @param {string} cost - Right-aligned cost text (e.g., "10B")
+     * @param {function} onClick - Click callback function
+     * @returns {object} Button object with background, labelText, costText, and methods
+     */
+    createButton(x, y, width, height, label, cost, onClick) {
+        // Create button background
+        const button = this.scene.add.rectangle(x, y, width, height, 0x4a4a4a, 0.9);
+        button.setStrokeStyle(2, 0x666666);
+        button.setInteractive();
+        
+        // Create left-aligned label text (symbol + name)
+        const labelText = this.scene.add.text(
+            x - (width / 2) + 10, // Left margin of 10px
+            y, 
+            label, 
+            { fontSize: '14px', fill: '#fff' }
+        ).setOrigin(0, 0.5); // Left-aligned, vertically centered
+        
+        // Create right-aligned cost text
+        const costText = this.scene.add.text(
+            x + (width / 2) - 10, // Right margin of 10px
+            y, 
+            cost, 
+            { fontSize: '12px', fill: '#ffd700' }
+        ).setOrigin(1, 0.5); // Right-aligned, vertically centered
+        
+        // Add click event
+        button.on('pointerdown', onClick);
+        
+        // Add hover effects
+        button.on('pointerover', () => {
+            button.setFillStyle(0x5a5a5a);
+        });
+        
+        button.on('pointerout', () => {
+            // Only reset if this button is not selected
+            if (!button._isSelected) {
+                button.setFillStyle(0x4a4a4a);
+            }
+        });
+        
+        // Return button object with all components and utility methods
+        return {
+            background: button,
+            labelText: labelText,
+            costText: costText,
+            
+            // Utility methods for button management
+            setSelected: (selected) => {
+                button._isSelected = selected;
+                button.setFillStyle(selected ? 0x6a6a6a : 0x4a4a4a);
+            },
+            
+            updateCost: (newCost) => {
+                costText.setText(newCost);
+            },
+            
+            updateLabel: (newLabel) => {
+                labelText.setText(newLabel);
+            },
+            
+            destroy: () => {
+                button.destroy();
+                labelText.destroy();
+                costText.destroy();
+            }
+        };
+    }
+
     createBuildingButtons(menuX, menuY) {
+        const buttonWidth = 160;
+        const buttonHeight = 40;
+        const buttonSpacing = 50;
+        const startY = menuY + 110;
+        
         let yOffset = 0;
-        Object.keys(this.buildingTypes).forEach((type, index) => {
+        Object.keys(this.buildingTypes).forEach((type) => {
             const building = this.buildingTypes[type];
-            const buttonY = menuY + 110 + (yOffset * 50);
+            const buttonY = startY + (yOffset * buttonSpacing);
             
-            const button = this.scene.add.rectangle(menuX + 100, buttonY, 160, 40, 0x4a4a4a, 0.9);
-            button.setStrokeStyle(2, 0x666666);
-            button.setInteractive();
+            // Create button using the new helper function
+            const buttonObj = this.createButton(
+                menuX + 100, // X position (centered in menu)
+                buttonY,     // Y position
+                buttonWidth, // Width
+                buttonHeight, // Height
+                `${building.symbol} ${building.name}`, // Label
+                `${building.cost}B`, // Cost
+                () => this.selectBuilding(type) // Click handler
+            );
             
-            const buttonText = this.scene.add.text(menuX + 50, buttonY, 
-                `${building.symbol} ${building.name}`, 
-                { fontSize: '14px', fill: '#fff' }
-            ).setOrigin(0, 0.5);
-            
-            const costText = this.scene.add.text(menuX + 150, buttonY, 
-                `${building.cost}B`, 
-                { fontSize: '12px', fill: '#ffd700' }
-            ).setOrigin(1, 0.5);
-            
-            button.on('pointerdown', () => {
-                this.selectBuilding(type);
-            });
-            
-            button.on('pointerover', () => {
-                button.setFillStyle(0x5a5a5a);
-            });
-            
-            button.on('pointerout', () => {
-                if (this.selectedBuildingType !== type) {
-                    button.setFillStyle(0x4a4a4a);
-                }
-            });
-            
-            this.buildingTypes[type].button = button;
-            this.buildingTypes[type].buttonText = buttonText;
-            this.buildingTypes[type].costText = costText;
+            // Store button components for later access
+            this.buildingTypes[type].button = buttonObj.background;
+            this.buildingTypes[type].buttonText = buttonObj.labelText;
+            this.buildingTypes[type].costText = buttonObj.costText;
+            this.buildingTypes[type].buttonObj = buttonObj; // Store complete button object
             
             yOffset++;
         });
     }
     
     selectBuilding(type) {
+        // Deselect previously selected building
         if (this.selectedBuildingType) {
-            this.buildingTypes[this.selectedBuildingType].button.setFillStyle(0x4a4a4a);
+            const prevButtonObj = this.buildingTypes[this.selectedBuildingType].buttonObj;
+            if (prevButtonObj) {
+                prevButtonObj.setSelected(false);
+            }
         }
         
+        // Select new building
         this.selectedBuildingType = type;
-        this.buildingTypes[type].button.setFillStyle(0x6a6a6a);
+        const buttonObj = this.buildingTypes[type].buttonObj;
+        if (buttonObj) {
+            buttonObj.setSelected(true);
+        }
         
         this.onSelectBuilding(type);
     }
     
     deselectBuilding() {
         if (this.selectedBuildingType) {
-            this.buildingTypes[this.selectedBuildingType].button.setFillStyle(0x4a4a4a);
+            const buttonObj = this.buildingTypes[this.selectedBuildingType].buttonObj;
+            if (buttonObj) {
+                buttonObj.setSelected(false);
+            }
             this.selectedBuildingType = null;
         }
     }

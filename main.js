@@ -26,6 +26,9 @@ class TowerDefenseGame extends Phaser.Scene {
         this.hoverGraphic = null;
         this.selectedBuilding = null;
         this.infoPanel = null;
+        this.showGrid = false;
+        this.gridGraphics = null;
+        this.selectedBuildingRotation = 0;
         this.buildingTypes = {
             tower: { cost: 10, name: 'Turm', symbol: '🏯', width: 1, height: 1 },
             farm: { cost: 10, name: 'Feld', symbol: '🌾', width: 1, height: 2 },
@@ -80,6 +83,91 @@ class TowerDefenseGame extends Phaser.Scene {
             }
         }
     }
+    
+    toggleGrid() {
+        this.showGrid = !this.showGrid;
+        this.gridButtonText.setText(`Raster: ${this.showGrid ? 'AN' : 'AUS'}`);
+        
+        if (this.showGrid) {
+            this.createGridGraphics();
+        } else {
+            this.destroyGridGraphics();
+        }
+    }
+    
+    createGridGraphics() {
+        if (this.gridGraphics) {
+            this.destroyGridGraphics();
+        }
+        
+        this.gridGraphics = this.add.group();
+        
+        for (let x = 0; x <= this.gridWidth; x++) {
+            const line = this.add.line(0, 0, x * this.gridSize, 0, x * this.gridSize, this.mapHeight, 0x666666, 0.3);
+            line.setOrigin(0, 0);
+            this.gridGraphics.add(line);
+        }
+        
+        for (let y = 0; y <= this.gridHeight; y++) {
+            const line = this.add.line(0, 0, 0, y * this.gridSize, this.mapWidth, y * this.gridSize, 0x666666, 0.3);
+            line.setOrigin(0, 0);
+            this.gridGraphics.add(line);
+        }
+    }
+    
+    destroyGridGraphics() {
+        if (this.gridGraphics) {
+            this.gridGraphics.clear(true, true);
+            this.gridGraphics = null;
+        }
+    }
+    
+    getRotatedDimensions(buildingType, rotation) {
+        const building = this.buildingTypes[buildingType];
+        if (rotation === 90 || rotation === 270) {
+            return { width: building.height, height: building.width };
+        }
+        return { width: building.width, height: building.height };
+    }
+    
+    rotateBuilding(building) {
+        if (building.type === 'tower') {
+            return; // Towers are square, no need to rotate
+        }
+        
+        const newRotation = (building.rotation + 90) % 360;
+        const oldDimensions = this.getRotatedDimensions(building.type, building.rotation);
+        const newDimensions = this.getRotatedDimensions(building.type, newRotation);
+        
+        // Free old grid space
+        this.freeGridArea(building.gridX, building.gridY, oldDimensions.width, oldDimensions.height);
+        
+        // Check if new rotation fits
+        if (this.isGridAreaFree(building.gridX, building.gridY, newDimensions.width, newDimensions.height)) {
+            // Occupy new grid space
+            this.occupyGridArea(building.gridX, building.gridY, newDimensions.width, newDimensions.height);
+            
+            // Update building properties
+            building.rotation = newRotation;
+            building.gridWidth = newDimensions.width;
+            building.gridHeight = newDimensions.height;
+            
+            // Update graphics
+            const displayWidth = newDimensions.width * this.gridSize;
+            const displayHeight = newDimensions.height * this.gridSize;
+            
+            building.graphic.setSize(displayWidth, displayHeight);
+            building.healthBarBg.x = building.x;
+            building.healthBarBg.y = building.y - displayHeight/2 - 10;
+            building.healthBarBg.setSize(displayWidth + 2, 6);
+            building.healthBar.x = building.x;
+            building.healthBar.y = building.y - displayHeight/2 - 10;
+            building.healthBar.setSize(displayWidth, 4);
+        } else {
+            // Re-occupy old space if rotation failed
+            this.occupyGridArea(building.gridX, building.gridY, oldDimensions.width, oldDimensions.height);
+        }
+    }
 
     preload() {
         this.load.image('pixel', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==');
@@ -100,6 +188,12 @@ class TowerDefenseGame extends Phaser.Scene {
         
         this.input.on('pointermove', (pointer) => {
             this.handleMouseMove(pointer);
+        });
+        
+        this.input.keyboard.on('keydown-R', () => {
+            if (this.selectedBuildingType) {
+                this.selectedBuildingRotation = (this.selectedBuildingRotation + 90) % 360;
+            }
         });
     }
     
@@ -142,7 +236,7 @@ class TowerDefenseGame extends Phaser.Scene {
         const menuX = this.mapWidth - 200;
         const menuY = 20;
         
-        const menuBg = this.add.rectangle(menuX + 100, menuY + 120, 180, 220, 0x333333, 0.9);
+        const menuBg = this.add.rectangle(menuX + 100, menuY + 140, 180, 260, 0x333333, 0.9);
         menuBg.setStrokeStyle(2, 0x666666);
         
         this.add.text(menuX + 100, menuY + 30, 'Gebäude', { 
@@ -151,10 +245,31 @@ class TowerDefenseGame extends Phaser.Scene {
             fontStyle: 'bold'
         }).setOrigin(0.5);
         
+        const gridButton = this.add.rectangle(menuX + 100, menuY + 60, 160, 30, 0x4a4a4a, 0.9);
+        gridButton.setStrokeStyle(2, 0x666666);
+        gridButton.setInteractive();
+        
+        this.gridButtonText = this.add.text(menuX + 100, menuY + 60, 'Raster: AUS', { 
+            fontSize: '14px', 
+            fill: '#fff' 
+        }).setOrigin(0.5);
+        
+        gridButton.on('pointerdown', () => {
+            this.toggleGrid();
+        });
+        
+        gridButton.on('pointerover', () => {
+            gridButton.setFillStyle(0x5a5a5a);
+        });
+        
+        gridButton.on('pointerout', () => {
+            gridButton.setFillStyle(0x4a4a4a);
+        });
+        
         let yOffset = 0;
         Object.keys(this.buildingTypes).forEach((type, index) => {
             const building = this.buildingTypes[type];
-            const buttonY = menuY + 70 + (yOffset * 50);
+            const buttonY = menuY + 90 + (yOffset * 50);
             
             const button = this.add.rectangle(menuX + 100, buttonY, 160, 40, 0x4a4a4a, 0.9);
             button.setStrokeStyle(2, 0x666666);
@@ -242,6 +357,16 @@ class TowerDefenseGame extends Phaser.Scene {
             this.timerText = null;
         }
         
+        if (this.rotateButton) {
+            this.rotateButton.destroy();
+            this.rotateButton = null;
+        }
+        
+        if (this.rotateButtonText) {
+            this.rotateButtonText.destroy();
+            this.rotateButtonText = null;
+        }
+        
         if (this.hoverGraphic) {
             this.hoverGraphic.destroy();
             this.hoverGraphic = null;
@@ -277,16 +402,17 @@ class TowerDefenseGame extends Phaser.Scene {
         }
         
         const building = this.buildingTypes[type];
+        const dimensions = this.getRotatedDimensions(type, this.selectedBuildingRotation);
         const gridPos = this.worldToGrid(x, y);
         const worldPos = this.gridToWorld(gridPos.x, gridPos.y);
         
         const canAfford = this.currency >= building.cost;
-        const canPlace = this.isGridAreaFree(gridPos.x, gridPos.y, building.width, building.height);
+        const canPlace = this.isGridAreaFree(gridPos.x, gridPos.y, dimensions.width, dimensions.height);
         const color = canAfford && canPlace ? 0x00ff00 : 0xff0000;
         const alpha = 0.5;
         
-        const displayWidth = building.width * this.gridSize;
-        const displayHeight = building.height * this.gridSize;
+        const displayWidth = dimensions.width * this.gridSize;
+        const displayHeight = dimensions.height * this.gridSize;
         
         this.hoverGraphic = this.add.rectangle(worldPos.x, worldPos.y, displayWidth, displayHeight, color, alpha);
         this.hoverGraphic.setStrokeStyle(2, color, 0.8);
@@ -294,24 +420,25 @@ class TowerDefenseGame extends Phaser.Scene {
     
     tryPlaceBuilding(x, y, type) {
         const building = this.buildingTypes[type];
+        const dimensions = this.getRotatedDimensions(type, this.selectedBuildingRotation);
         const gridPos = this.worldToGrid(x, y);
         const worldPos = this.gridToWorld(gridPos.x, gridPos.y);
         
         const canAfford = this.currency >= building.cost;
-        const canPlace = this.isGridAreaFree(gridPos.x, gridPos.y, building.width, building.height);
+        const canPlace = this.isGridAreaFree(gridPos.x, gridPos.y, dimensions.width, dimensions.height);
         
         if (canAfford && canPlace) {
             this.currency -= building.cost;
             this.currencyText.setText(`Batzen: ${this.currency}`);
             
-            this.occupyGridArea(gridPos.x, gridPos.y, building.width, building.height);
+            this.occupyGridArea(gridPos.x, gridPos.y, dimensions.width, dimensions.height);
             
             if (type === 'tower') {
-                this.placeTowerFree(worldPos.x, worldPos.y, gridPos);
+                this.placeTowerFree(worldPos.x, worldPos.y, gridPos, this.selectedBuildingRotation);
             } else if (type === 'farm') {
-                this.placeFarm(worldPos.x, worldPos.y, gridPos);
+                this.placeFarm(worldPos.x, worldPos.y, gridPos, this.selectedBuildingRotation);
             } else if (type === 'factory') {
-                this.placeFactory(worldPos.x, worldPos.y, gridPos);
+                this.placeFactory(worldPos.x, worldPos.y, gridPos, this.selectedBuildingRotation);
             }
             
             if (this.hoverGraphic) {
@@ -319,23 +446,26 @@ class TowerDefenseGame extends Phaser.Scene {
                 this.hoverGraphic = null;
             }
             
+            this.selectedBuildingRotation = 0; // Reset rotation after placement
             this.deselectBuilding();
         } else if (!canAfford) {
             this.showInsufficientFundsMessage();
         }
     }
     
-    placeFarm(x, y, gridPos) {
-        const displayWidth = this.buildingTypes.farm.width * this.gridSize;
-        const displayHeight = this.buildingTypes.farm.height * this.gridSize;
+    placeFarm(x, y, gridPos, rotation = 0) {
+        const dimensions = this.getRotatedDimensions('farm', rotation);
+        const displayWidth = dimensions.width * this.gridSize;
+        const displayHeight = dimensions.height * this.gridSize;
         
         const farm = {
             x: x,
             y: y,
             gridX: gridPos.x,
             gridY: gridPos.y,
-            gridWidth: this.buildingTypes.farm.width,
-            gridHeight: this.buildingTypes.farm.height,
+            gridWidth: dimensions.width,
+            gridHeight: dimensions.height,
+            rotation: rotation,
             health: 100,
             maxHealth: 100,
             type: 'farm',
@@ -355,17 +485,19 @@ class TowerDefenseGame extends Phaser.Scene {
         this.buildings.push(farm);
     }
     
-    placeFactory(x, y, gridPos) {
-        const displayWidth = this.buildingTypes.factory.width * this.gridSize;
-        const displayHeight = this.buildingTypes.factory.height * this.gridSize;
+    placeFactory(x, y, gridPos, rotation = 0) {
+        const dimensions = this.getRotatedDimensions('factory', rotation);
+        const displayWidth = dimensions.width * this.gridSize;
+        const displayHeight = dimensions.height * this.gridSize;
         
         const factory = {
             x: x,
             y: y,
             gridX: gridPos.x,
             gridY: gridPos.y,
-            gridWidth: this.buildingTypes.factory.width,
-            gridHeight: this.buildingTypes.factory.height,
+            gridWidth: dimensions.width,
+            gridHeight: dimensions.height,
+            rotation: rotation,
             health: 150,
             maxHealth: 150,
             type: 'factory',
@@ -383,7 +515,7 @@ class TowerDefenseGame extends Phaser.Scene {
     }
     
     
-    placeTowerFree(x, y, gridPos) {
+    placeTowerFree(x, y, gridPos, rotation = 0) {
         const displaySize = this.gridSize;
         
         const tower = {
@@ -393,6 +525,7 @@ class TowerDefenseGame extends Phaser.Scene {
             gridY: gridPos.y,
             gridWidth: this.buildingTypes.tower.width,
             gridHeight: this.buildingTypes.tower.height,
+            rotation: rotation,
             health: 75,
             maxHealth: 75,
             range: 60,
@@ -760,6 +893,14 @@ class TowerDefenseGame extends Phaser.Scene {
             this.timerText.destroy();
             this.timerText = null;
         }
+        if (this.rotateButton) {
+            this.rotateButton.destroy();
+            this.rotateButton = null;
+        }
+        if (this.rotateButtonText) {
+            this.rotateButtonText.destroy();
+            this.rotateButtonText = null;
+        }
         
         let infoText = '';
         if (building.type === 'tower') {
@@ -782,6 +923,34 @@ class TowerDefenseGame extends Phaser.Scene {
             backgroundColor: '#000000',
             padding: { x: 10, y: 8 }
         }).setOrigin(0, 0.5);
+        
+        // Add rotation button for non-tower buildings
+        if (building.type !== 'tower') {
+            const buttonY = this.infoPanel.y + this.infoPanel.height / 2 + 20;
+            
+            this.rotateButton = this.add.rectangle(building.x + 50, buttonY, 80, 25, 0x4a4a4a, 0.9);
+            this.rotateButton.setStrokeStyle(1, 0x666666);
+            this.rotateButton.setInteractive();
+            this.rotateButton.setOrigin(0, 0.5);
+            
+            this.rotateButtonText = this.add.text(building.x + 90, buttonY, '🔄 Drehen', {
+                fontSize: '10px',
+                fill: '#fff'
+            }).setOrigin(0.5, 0.5);
+            
+            this.rotateButton.on('pointerdown', () => {
+                this.rotateBuilding(building);
+                this.showBuildingInfo(building); // Refresh info panel
+            });
+            
+            this.rotateButton.on('pointerover', () => {
+                this.rotateButton.setFillStyle(0x5a5a5a);
+            });
+            
+            this.rotateButton.on('pointerout', () => {
+                this.rotateButton.setFillStyle(0x4a4a4a);
+            });
+        }
         
         if (building.type === 'farm') {
             this.createFarmTimer(building);

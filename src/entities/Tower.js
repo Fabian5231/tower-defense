@@ -13,9 +13,9 @@ export default class Tower {
         this.level = 1;
         this.health = 75;
         this.maxHealth = 75;
-        this.range = 60;
+        this.range = 80;
         this.damage = 25;
-        this.fireRate = 500; // milliseconds
+        this.fireRate = 300; // milliseconds
         this.lastFired = 0;
         this.type = 'tower';
         

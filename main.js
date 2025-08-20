@@ -9,7 +9,8 @@ const config = {
     scene: TowerDefenseGame,
     physics: {
         default: 'arcade'
-    }
+    },
+
 };
 
 const game = new Phaser.Game(config);

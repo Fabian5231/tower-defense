@@ -410,15 +410,9 @@ export default class TowerDefenseGame extends Phaser.Scene {
     }
     
     togglePause() {
-        this.isPaused = !this.isPaused;
-        this.buildingMenu.updatePauseDisplay(this.isPaused);
-        
-        if (this.isPaused) {
-            this.scene.pause();
-        } else {
-            this.scene.resume();
-        }
-    }
+    this.isPaused = !this.isPaused;
+    this.buildingMenu.updatePauseDisplay(this.isPaused);
+}
     
     changeSpeed() {
         if (this.isPaused) return;

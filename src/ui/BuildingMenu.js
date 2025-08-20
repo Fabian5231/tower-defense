@@ -27,7 +27,7 @@ export default class BuildingMenu {
         const menuY = 20;
         
         // Menu background
-        const menuBg = this.scene.add.rectangle(menuX + 100, menuY + 160, 180, 300, 0x333333, 0.9);
+        const menuBg = this.scene.add.rectangle(menuX + 100, menuY + 160, 180, 400, 0x333333, 0.9);
         menuBg.setStrokeStyle(2, 0x666666);
         
         // Menu title
@@ -71,13 +71,6 @@ export default class BuildingMenu {
     }
     
     createSpeedControls(menuX, menuY) {
-        // Speed control title
-        this.scene.add.text(menuX + 100, menuY + 290, 'Geschwindigkeit', { 
-            fontSize: '16px', 
-            fill: '#fff',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
-        
         // Pause button
         const pauseButton = this.scene.add.rectangle(menuX + 50, menuY + 315, 70, 25, 0x4a4a4a, 0.9);
         pauseButton.setStrokeStyle(1, 0x666666);
@@ -190,14 +183,12 @@ export default class BuildingMenu {
     }
     
     togglePause() {
-        this.isPaused = !this.isPaused;
-        this.elements.pauseButtonText.setText(this.isPaused ? '▶️ Weiter' : '⏸️ Pause');
-        this.onTogglePause(this.isPaused);
+        // Nur Callback auslösen – Scene kümmert sich um den Status
+        this.onTogglePause();
     }
     
     changeSpeed() {
         if (this.isPaused) return;
-        
         this.onChangeSpeed();
     }
     

@@ -190,10 +190,8 @@ export default class TowerDefenseGame extends Phaser.Scene {
             this.hoverGraphic = null;
         }
         
-        if (this.hoverRangeCircle) {
-            this.hoverRangeCircle.destroy();
-            this.hoverRangeCircle = null;
-        }
+        // Use BuildingMenu's clean range preview system
+        this.buildingMenu.clearRangePreview();
     }
     
     handleClick(pointer) {
@@ -208,27 +206,28 @@ export default class TowerDefenseGame extends Phaser.Scene {
     
     handleMouseMove(pointer) {
         if (!this.selectedBuildingType || pointer.x > this.mapWidth - 200) {
+            // Clear building preview when outside game area
             if (this.hoverGraphic) {
                 this.hoverGraphic.setVisible(false);
             }
-            if (this.hoverRangeCircle) {
-                this.hoverRangeCircle.setVisible(false);
-            }
+            this.buildingMenu.clearRangePreview();
             return;
         }
         
         if (pointer.y > 100) {
             this.showBuildingPreview(pointer.x, pointer.y, this.selectedBuildingType);
+        } else {
+            // Clear preview when in UI area
+            if (this.hoverGraphic) {
+                this.hoverGraphic.setVisible(false);
+            }
+            this.buildingMenu.clearRangePreview();
         }
     }
     
     showBuildingPreview(x, y, type) {
         if (this.hoverGraphic) {
             this.hoverGraphic.destroy();
-        }
-        if (this.hoverRangeCircle) {
-            this.hoverRangeCircle.destroy();
-            this.hoverRangeCircle = null;
         }
         
         const building = this.buildingMenu.getBuildingType(type);
@@ -244,16 +243,12 @@ export default class TowerDefenseGame extends Phaser.Scene {
         const displayWidth = dimensions.width * this.gridSize;
         const displayHeight = dimensions.height * this.gridSize;
         
+        // Building-Preview Rechteck
         this.hoverGraphic = this.add.rectangle(worldPos.x, worldPos.y, displayWidth, displayHeight, color, alpha);
         this.hoverGraphic.setStrokeStyle(2, color, 0.8);
         
-        // Show range preview for towers
-        if (type === 'tower') {
-            const towerRange = 60;
-            const rangeColor = canAfford && canPlace ? 0x00ff00 : 0xff0000;
-            this.hoverRangeCircle = this.add.circle(worldPos.x, worldPos.y, towerRange, rangeColor, 0.1);
-            this.hoverRangeCircle.setStrokeStyle(2, rangeColor, 0.3);
-        }
+        // Range-Preview über BuildingMenu (sauberer und einheitlicher)
+        this.buildingMenu.showRangePreview(worldPos.x, worldPos.y, type);
     }
     
     tryPlaceBuilding(x, y, type) {

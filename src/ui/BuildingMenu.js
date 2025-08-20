@@ -1,5 +1,3 @@
-import Tower from "../entities/Tower.js";
-
 export default class BuildingMenu {
     constructor(
         scene,
@@ -27,7 +25,7 @@ export default class BuildingMenu {
                 width: 1,
                 height: 1,
                 maxLevel: 3,
-                classRef: Tower // Referenz auf die Klasse
+                range: 80 // Direkte Range-Angabe (Level 1)
             },
             farm: {
                 cost: 10,
@@ -46,6 +44,9 @@ export default class BuildingMenu {
                 maxLevel: 3
             }
         };
+        
+        // Range-Preview State
+        this.previewRangeCircle = null;
 
         this.elements = {};
 
@@ -261,79 +262,73 @@ export default class BuildingMenu {
     }
 
     selectBuilding(type) {
-    // Deselect previously selected building
-    if (this.selectedBuildingType) {
-        const prevButtonObj =
-            this.buildingTypes[this.selectedBuildingType].buttonObj;
-        if (prevButtonObj) {
-            prevButtonObj.setSelected(false);
+        // Deselect previously selected building
+        if (this.selectedBuildingType) {
+            const prevButtonObj = this.buildingTypes[this.selectedBuildingType].buttonObj;
+            if (prevButtonObj) {
+                prevButtonObj.setSelected(false);
+            }
         }
-    }
 
-    // Select new building
-    this.selectedBuildingType = type;
-    const buttonObj = this.buildingTypes[type].buttonObj;
-    if (buttonObj) {
-        buttonObj.setSelected(true);
-    }
+        // Clear any existing preview
+        this.clearRangePreview();
 
-    // ✅ Preview-Range anzeigen
-    this.showPreviewRange(type);
-
-    this.onSelectBuilding(type);
-}
-
-showPreviewRange(type) {
-    // Falls schon ein Preview-Kreis existiert → löschen
-    if (this.previewRangeCircle) {
-        this.previewRangeCircle.destroy();
-        this.previewRangeCircle = null;
-    }
-
-    const building = this.buildingTypes[type];
-    if (!building.classRef) return; // nur für Tower etc.
-
-    // Temporären Tower erzeugen (z. B. in der Mitte der Map)
-    const previewTower = new building.classRef(
-        this.scene,
-        600, // x (zentral)
-        400, // y (zentral)
-        { x: 0, y: 0 }
-    );
-
-    // Range auslesen
-    const range = previewTower.range;
-
-    // Tower sofort wieder zerstören (wir brauchen nur den Wert)
-    previewTower.destroy();
-
-    // Range-Kreis zeichnen
-    this.previewRangeCircle = this.scene.add.circle(
-        600,
-        400,
-        range,
-        0x00ff00,
-        0.1
-    );
-    this.previewRangeCircle.setStrokeStyle(2, 0x00ff00, 0.3);
-}
-
-   deselectBuilding() {
-    if (this.selectedBuildingType) {
-        const buttonObj =
-            this.buildingTypes[this.selectedBuildingType].buttonObj;
+        // Select new building
+        this.selectedBuildingType = type;
+        const buttonObj = this.buildingTypes[type].buttonObj;
         if (buttonObj) {
-            buttonObj.setSelected(false);
+            buttonObj.setSelected(true);
         }
-        this.selectedBuildingType = null;
+
+        this.onSelectBuilding(type);
     }
 
-    // ✅ Preview-Kreis entfernen
-    if (this.previewRangeCircle) {
-        this.previewRangeCircle.destroy();
-        this.previewRangeCircle = null;
+    /**
+     * Zeigt Range-Preview für Gebäude mit Range (z.B. Tower) an der Maus-Position
+     */
+    showRangePreview(x, y, buildingType) {
+        // Nur für Gebäude mit Range
+        const building = this.buildingTypes[buildingType];
+        if (!building || !building.range) {
+            return;
+        }
+
+        // Entferne alten Preview-Kreis
+        this.clearRangePreview();
+
+        // Erstelle neuen Range-Kreis an der Maus-Position
+        this.previewRangeCircle = this.scene.add.circle(
+            x, y, 
+            building.range, 
+            0x00ff00, 
+            0.1
+        );
+        this.previewRangeCircle.setStrokeStyle(2, 0x00ff00, 0.3);
+        this.previewRangeCircle.setDepth(100); // Über anderen Objekten anzeigen
     }
-}
+
+    /**
+     * Entfernt den Range-Preview Kreis sauber
+     */
+    clearRangePreview() {
+        if (this.previewRangeCircle) {
+            this.previewRangeCircle.destroy();
+            this.previewRangeCircle = null;
+        }
+    }
+
+    deselectBuilding() {
+        if (this.selectedBuildingType) {
+            const buttonObj = this.buildingTypes[this.selectedBuildingType].buttonObj;
+            if (buttonObj) {
+                buttonObj.setSelected(false);
+            }
+            this.selectedBuildingType = null;
+        }
+
+        // Range-Preview entfernen
+        this.clearRangePreview();
+    }
 
     toggleGrid() {
         this.showGrid = !this.showGrid;

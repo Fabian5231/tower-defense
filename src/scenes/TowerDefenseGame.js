@@ -8,6 +8,7 @@ import BuildingMenu from '../ui/BuildingMenu.js';
 import InfoPanel from '../ui/InfoPanel.js';
 import GridManager from '../utils/GridManager.js';
 import WaveManager from '../utils/WaveManager.js';
+import TerrainManager from '../utils/TerrainManager.js';
 
 export default class TowerDefenseGame extends Phaser.Scene {
     constructor() {
@@ -46,6 +47,7 @@ export default class TowerDefenseGame extends Phaser.Scene {
         // Managers
         this.gridManager = null;
         this.waveManager = null;
+        this.terrainManager = null;
         
         // UI Components
         this.hud = null;
@@ -61,6 +63,7 @@ export default class TowerDefenseGame extends Phaser.Scene {
         // Initialize managers
         this.gridManager = new GridManager(this.mapWidth, this.mapHeight, this.gridSize);
         this.waveManager = new WaveManager();
+        this.terrainManager = new TerrainManager(this, this.mapWidth, this.mapHeight, this.gridSize);
         
         // Initialize UI
         this.hud = new HUD(this);
@@ -243,7 +246,9 @@ export default class TowerDefenseGame extends Phaser.Scene {
         const worldPos = this.gridManager.gridToWorldForBuilding(gridPos.x, gridPos.y, dimensions.width, dimensions.height);
         
         const canAfford = this.currency >= building.cost;
-        const canPlace = this.gridManager.isGridAreaFree(gridPos.x, gridPos.y, dimensions.width, dimensions.height);
+        const canPlaceGrid = this.gridManager.isGridAreaFree(gridPos.x, gridPos.y, dimensions.width, dimensions.height);
+        const canPlaceTerrain = this.checkTerrainForBuilding(gridPos.x, gridPos.y, dimensions.width, dimensions.height);
+        const canPlace = canPlaceGrid && canPlaceTerrain;
         const color = canAfford && canPlace ? 0x00ff00 : 0xff0000;
         const alpha = 0.5;
         
@@ -265,7 +270,9 @@ export default class TowerDefenseGame extends Phaser.Scene {
         const worldPos = this.gridManager.gridToWorldForBuilding(gridPos.x, gridPos.y, dimensions.width, dimensions.height);
         
         const canAfford = this.currency >= building.cost;
-        const canPlace = this.gridManager.isGridAreaFree(gridPos.x, gridPos.y, dimensions.width, dimensions.height);
+        const canPlaceGrid = this.gridManager.isGridAreaFree(gridPos.x, gridPos.y, dimensions.width, dimensions.height);
+        const canPlaceTerrain = this.checkTerrainForBuilding(gridPos.x, gridPos.y, dimensions.width, dimensions.height);
+        const canPlace = canPlaceGrid && canPlaceTerrain;
         
         if (canAfford && canPlace) {
             this.currency -= building.cost;
@@ -600,7 +607,7 @@ export default class TowerDefenseGame extends Phaser.Scene {
     
     updateEnemies(delta) {
         this.enemies.forEach(enemy => {
-            const result = enemy.update(delta, this.townHall, this.gameSpeed);
+            const result = enemy.update(delta, this.townHall, this.gameSpeed, this.terrainManager);
             if (result.hitTownHall) {
                 this.townHallHealth -= result.damage;
                 this.hud.updateTownHallHealth(this.townHallHealth);
@@ -653,13 +660,24 @@ export default class TowerDefenseGame extends Phaser.Scene {
                 projectile.toRemove = true;
                 
                 if (projectile.target && !projectile.target.toRemove) {
-                    const result = projectile.target.takeDamage(projectile.damage);
+                    // Check terrain-based accuracy modifier
+                    let hitChance = 1.0; // 100% hit chance by default
+                    if (this.terrainManager) {
+                        const targetGridX = Math.floor(projectile.target.x / this.gridSize);
+                        const targetGridY = Math.floor(projectile.target.y / this.gridSize);
+                        hitChance = this.terrainManager.getAccuracyModifier(targetGridX, targetGridY);
+                    }
                     
-                    if (result.killed) {
-                        this.score += result.score;
-                        this.currency += result.gold;
-                        this.hud.updateScore(this.score);
-                        this.hud.updateCurrency(this.currency);
+                    // Roll for hit based on terrain
+                    if (Math.random() <= hitChance) {
+                        const result = projectile.target.takeDamage(projectile.damage);
+                        
+                        if (result.killed) {
+                            this.score += result.score;
+                            this.currency += result.gold;
+                            this.hud.updateScore(this.score);
+                            this.hud.updateCurrency(this.currency);
+                        }
                     }
                 }
                 return;
@@ -711,6 +729,18 @@ export default class TowerDefenseGame extends Phaser.Scene {
             }
             return true;
         });
+    }
+    
+    checkTerrainForBuilding(gridX, gridY, width, height) {
+        // Check if all cells in the building area are suitable for construction
+        for (let y = gridY; y < gridY + height; y++) {
+            for (let x = gridX; x < gridX + width; x++) {
+                if (!this.terrainManager.canPlaceBuildingAt(x, y)) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
     
     gameOver() {

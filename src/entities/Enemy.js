@@ -52,7 +52,7 @@ export default class Enemy {
         this.healthBar.setVisible(false);
     }
     
-    update(delta, townHall, gameSpeed) {
+    update(delta, townHall, gameSpeed, terrainManager = null) {
         if (this.toRemove) return;
         
         const direction = {
@@ -71,8 +71,17 @@ export default class Enemy {
         direction.x /= distance;
         direction.y /= distance;
         
-        this.x += direction.x * this.speed * (delta / 1000);
-        this.y += direction.y * this.speed * (delta / 1000);
+        // Apply terrain movement modifier
+        let effectiveSpeed = this.speed * gameSpeed;
+        if (terrainManager) {
+            const gridX = Math.floor(this.x / 30); // gridSize is 30
+            const gridY = Math.floor(this.y / 30);
+            const modifier = terrainManager.getMovementModifier(gridX, gridY);
+            effectiveSpeed *= modifier;
+        }
+        
+        this.x += direction.x * effectiveSpeed * (delta / 1000);
+        this.y += direction.y * effectiveSpeed * (delta / 1000);
         
         this.updateGraphics();
         

@@ -34,6 +34,7 @@ class TowerDefenseGame extends Phaser.Scene {
         this.showGrid = false;
         this.gridGraphics = null;
         this.selectedBuildingRotation = 0;
+        this.towerRangeCircles = [];
         this.buildingTypes = {
             tower: { cost: 10, name: 'Turm', symbol: '🏯', width: 1, height: 1 },
             farm: { cost: 10, name: 'Feld', symbol: '🌾', width: 1, height: 2 },
@@ -125,6 +126,23 @@ class TowerDefenseGame extends Phaser.Scene {
             this.gridGraphics.clear(true, true);
             this.gridGraphics = null;
         }
+    }
+    
+    showAllTowerRanges() {
+        this.clearAllTowerRanges();
+        
+        this.towers.forEach(tower => {
+            const rangeCircle = this.add.circle(tower.x, tower.y, tower.range, 0x00ff00, 0.1);
+            rangeCircle.setStrokeStyle(2, 0x00ff00, 0.3);
+            this.towerRangeCircles.push(rangeCircle);
+        });
+    }
+    
+    clearAllTowerRanges() {
+        this.towerRangeCircles.forEach(circle => {
+            circle.destroy();
+        });
+        this.towerRangeCircles = [];
     }
     
     getRotatedDimensions(buildingType, rotation) {
@@ -397,10 +415,7 @@ class TowerDefenseGame extends Phaser.Scene {
         }
         
         if (this.selectedBuilding) {
-            if (this.selectedBuilding.rangeIndicator) {
-                this.selectedBuilding.rangeIndicator.destroy();
-                this.selectedBuilding.rangeIndicator = null;
-            }
+            this.clearAllTowerRanges();
             
             // Progress-Bar cleanup für die ausgewählte Farm
             if (this.selectedBuilding.progressBar) {
@@ -625,9 +640,6 @@ class TowerDefenseGame extends Phaser.Scene {
         };
         
         tower.graphic.setStrokeStyle(2, 0x00aa00);
-        
-        const rangeCircle = this.add.circle(x, y, tower.range, 0x00ff00, 0.1);
-        rangeCircle.setStrokeStyle(2, 0x00ff00, 0.3);
         
         tower.healthBarBg.setVisible(false);
         tower.healthBar.setVisible(false);
@@ -1005,9 +1017,7 @@ class TowerDefenseGame extends Phaser.Scene {
             this.showBuildingInfo(clickedBuilding);
             
             if (clickedBuilding.type === 'tower') {
-                const rangeCircle = this.add.circle(clickedBuilding.x, clickedBuilding.y, clickedBuilding.range, 0xffff00, 0.2);
-                rangeCircle.setStrokeStyle(2, 0xffff00, 0.6);
-                clickedBuilding.rangeIndicator = rangeCircle;
+                this.showAllTowerRanges();
             }
         } else {
             this.deselectBuilding();
@@ -1045,6 +1055,11 @@ class TowerDefenseGame extends Phaser.Scene {
             infoText += '\n\nTimer: Lade...';
         }
         
+        // Add rotation button for non-tower buildings integrated into the info panel
+        if (building.type !== 'tower') {
+            infoText += '\n\n🔄 Drehen (Klicken)';
+        }
+        
         // InfoPanel Container
         this.infoPanel = this.add.text(building.x + 50, building.y - 30, infoText, {
             fontSize: '12px',
@@ -1053,31 +1068,26 @@ class TowerDefenseGame extends Phaser.Scene {
             padding: { x: 10, y: 8 }
         }).setOrigin(0, 0.5);
         
-        // Add rotation button for non-tower buildings
         if (building.type !== 'tower') {
-            const buttonY = this.infoPanel.y + this.infoPanel.height / 2 + 20;
-            
-            this.rotateButton = this.add.rectangle(building.x + 50, buttonY, 80, 25, 0x4a4a4a, 0.9);
-            this.rotateButton.setStrokeStyle(1, 0x666666);
-            this.rotateButton.setInteractive();
-            this.rotateButton.setOrigin(0, 0.5);
-            
-            this.rotateButtonText = this.add.text(building.x + 90, buttonY, '🔄 Drehen', {
-                fontSize: '10px',
-                fill: '#fff'
-            }).setOrigin(0.5, 0.5);
-            
-            this.rotateButton.on('pointerdown', () => {
-                this.rotateBuilding(building);
-                this.showBuildingInfo(building); // Refresh info panel
+            // Make the entire info panel clickable for rotation
+            this.infoPanel.setInteractive();
+            this.infoPanel.on('pointerdown', (pointer, localX, localY) => {
+                // Check if click is in the rotation area (bottom part of panel)
+                const panelHeight = this.infoPanel.height;
+                const clickY = localY;
+                
+                if (clickY > panelHeight * 0.7) { // Bottom 30% of panel is rotation area
+                    this.rotateBuilding(building);
+                    this.showBuildingInfo(building); // Refresh info panel
+                }
             });
             
-            this.rotateButton.on('pointerover', () => {
-                this.rotateButton.setFillStyle(0x5a5a5a);
+            this.infoPanel.on('pointerover', () => {
+                this.infoPanel.setBackgroundColor('#111111'); // Slightly lighter on hover
             });
             
-            this.rotateButton.on('pointerout', () => {
-                this.rotateButton.setFillStyle(0x4a4a4a);
+            this.infoPanel.on('pointerout', () => {
+                this.infoPanel.setBackgroundColor('#000000'); // Back to original
             });
         }
         

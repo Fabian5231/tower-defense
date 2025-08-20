@@ -3,6 +3,10 @@ export default class InfoPanel {
         this.scene = scene;
         this.currentBuilding = null;
         this.elements = {};
+
+        // UI-Layer erstellen (liegt immer ganz vorne)
+        this.uiLayer = this.scene.add.layer();
+        this.uiLayer.setDepth(1000);
     }
     
     show(building, onUpgrade, onRotate) {
@@ -19,6 +23,9 @@ export default class InfoPanel {
             backgroundColor: '#000000',
             padding: { x: 10, y: 8 }
         }).setOrigin(0, 0.5);
+
+        // ins UI-Layer packen
+        this.uiLayer.add(this.elements.infoPanel);
         
         // Create upgrade button
         this.createUpgradeButton(building, onUpgrade);
@@ -75,6 +82,9 @@ export default class InfoPanel {
                 fill: '#fff'
             }).setOrigin(0.5, 0.5);
             
+            // ins UI-Layer packen
+            this.uiLayer.add([this.elements.upgradeButton, this.elements.upgradeButtonText]);
+            
             // Button interactions
             this.elements.upgradeButton.on('pointerdown', () => {
                 onUpgrade(building);
@@ -93,6 +103,8 @@ export default class InfoPanel {
                 fontSize: '10px',
                 fill: '#ffd700'
             }).setOrigin(0, 0.5);
+
+            this.uiLayer.add(this.elements.upgradeButtonText);
         }
     }
     
@@ -111,6 +123,9 @@ export default class InfoPanel {
             fontSize: '10px',
             fill: '#fff'
         }).setOrigin(0.5, 0.5);
+
+        // ins UI-Layer packen
+        this.uiLayer.add([this.elements.rotateButton, this.elements.rotateButtonText]);
         
         // Button interactions
         this.elements.rotateButton.on('pointerdown', () => {

@@ -8,54 +8,79 @@ export default class Tower {
         this.gridWidth = 1;
         this.gridHeight = 1;
         this.rotation = rotation;
-        
-        // Tower stats
+
+        // Tower Level
         this.level = 1;
-        this.health = 75;
-        this.maxHealth = 75;
-        this.range = 80;
-        this.damage = 25;
-        this.fireRate = 300; // milliseconds
+        this.type = "tower";
+
+        // Level-basierten Stats definieren
+        this.levelStats = {
+            1: { damage: 25, range: 80, health: 75 },
+            2: { damage: 40, range: 100, health: 199 },
+            3: { damage: 55, range: 100, health: 125 }
+        };
+
+        // Fire-Rate bleibt gleich für alle Level
+        this.fireRate = 300; // ms
         this.lastFired = 0;
-        this.type = 'tower';
-        
+
         // Flags
         this.toRemove = false;
-        
+
+        // Stats initial anwenden
+        this.applyLevelStats();
+
         this.createGraphics();
     }
-    
+
+    /**
+     * Wendet die Stats des aktuellen Levels an
+     */
+    applyLevelStats() {
+        const stats = this.levelStats[this.level];
+        this.damage = stats.damage;
+        this.range = stats.range;
+        this.maxHealth = stats.health;
+        this.health = this.maxHealth;
+    }
+
     createGraphics() {
         const displaySize = 30; // gridSize
-        
+
         // Main tower graphic
-        this.graphic = this.scene.add.rectangle(this.x, this.y, displaySize, displaySize, 0x00ff00);
+        this.graphic = this.scene.add.rectangle(
+            this.x,
+            this.y,
+            displaySize,
+            displaySize,
+            0x00ff00
+        );
         this.graphic.setStrokeStyle(2, 0x00aa00);
-        
+
         // Health bars
         this.healthBarBg = this.scene.add.rectangle(
-            this.x, 
-            this.y - displaySize/2 - 10, 
-            displaySize + 2, 
-            6, 
+            this.x,
+            this.y - displaySize / 2 - 10,
+            displaySize + 2,
+            6,
             0x666666
         );
         this.healthBar = this.scene.add.rectangle(
-            this.x, 
-            this.y - displaySize/2 - 10, 
-            displaySize, 
-            4, 
+            this.x,
+            this.y - displaySize / 2 - 10,
+            displaySize,
+            4,
             0x00ff00
         );
-        
+
         // Hide health bars initially
         this.healthBarBg.setVisible(false);
         this.healthBar.setVisible(false);
     }
-    
+
     update(time, enemies, gameSpeed) {
         const adjustedFireRate = this.fireRate / gameSpeed;
-        
+
         if (time - this.lastFired > adjustedFireRate) {
             const target = this.findBestTarget(enemies);
             if (target) {
@@ -64,29 +89,30 @@ export default class Tower {
                 return projectile;
             }
         }
-        
+
         return null;
     }
-    
+
     findBestTarget(enemies) {
         let bestTarget = null;
         let shortestDistanceToTownHall = Infinity;
-        
-        enemies.forEach(enemy => {
+
+        enemies.forEach((enemy) => {
             // Check if enemy is in range
             const distanceToTower = Math.sqrt(
-                (enemy.x - this.x) * (enemy.x - this.x) + 
-                (enemy.y - this.y) * (enemy.y - this.y)
+                (enemy.x - this.x) * (enemy.x - this.x) +
+                    (enemy.y - this.y) * (enemy.y - this.y)
             );
-            
+
             if (distanceToTower <= this.range) {
                 // Calculate distance from enemy to town hall (assuming center at 600, 400)
-                const townHallX = 600, townHallY = 400;
+                const townHallX = 600,
+                    townHallY = 400;
                 const distanceToTownHall = Math.sqrt(
-                    (enemy.x - townHallX) * (enemy.x - townHallX) + 
-                    (enemy.y - townHallY) * (enemy.y - townHallY)
+                    (enemy.x - townHallX) * (enemy.x - townHallX) +
+                        (enemy.y - townHallY) * (enemy.y - townHallY)
                 );
-                
+
                 // Prioritize enemy closest to town hall
                 if (distanceToTownHall < shortestDistanceToTownHall) {
                     bestTarget = enemy;
@@ -94,10 +120,10 @@ export default class Tower {
                 }
             }
         });
-        
+
         return bestTarget;
     }
-    
+
     fire(target) {
         return {
             x: this.x,
@@ -110,30 +136,24 @@ export default class Tower {
             graphic: this.scene.add.circle(this.x, this.y, 3, 0xffff00)
         };
     }
-    
+
     upgrade() {
         if (this.level >= 3) return false; // Max level reached
-        
+
         this.level++;
-        
-        // Apply level-based improvements
-        this.damage = 25 + ((this.level - 1) * 15); // Level 1: 25, Level 2: 40, Level 3: 55
-        this.range = 60 + ((this.level - 1) * 20);   // Level 1: 60, Level 2: 80, Level 3: 100
-        this.maxHealth = 75 + ((this.level - 1) * 25); // Level 1: 75, Level 2: 100, Level 3: 125
-        this.health = this.maxHealth; // Heal to full on upgrade
-        
+        this.applyLevelStats(); // Neue Stats anwenden
         return true;
     }
-    
+
     takeDamage(damage) {
         this.health -= damage;
         this.showHealthBar();
-        
+
         if (this.health <= 0) {
             this.toRemove = true;
         }
     }
-    
+
     showHealthBar() {
         if (!this.healthBarBg.visible) {
             this.healthBarBg.setVisible(true);
@@ -141,25 +161,31 @@ export default class Tower {
         }
         this.healthBar.scaleX = this.health / this.maxHealth;
     }
-    
+
     showRange() {
         if (this.rangeCircle) {
             this.rangeCircle.destroy();
         }
-        
-        this.rangeCircle = this.scene.add.circle(this.x, this.y, this.range, 0x00ff00, 0.1);
+
+        this.rangeCircle = this.scene.add.circle(
+            this.x,
+            this.y,
+            this.range,
+            0x00ff00,
+            0.1
+        );
         this.rangeCircle.setStrokeStyle(2, 0x00ff00, 0.3);
-        
+
         return this.rangeCircle;
     }
-    
+
     hideRange() {
         if (this.rangeCircle) {
             this.rangeCircle.destroy();
             this.rangeCircle = null;
         }
     }
-    
+
     destroy() {
         this.graphic.destroy();
         this.healthBarBg.destroy();

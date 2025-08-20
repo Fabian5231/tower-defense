@@ -341,7 +341,7 @@ export default class TowerDefenseGame extends Phaser.Scene {
                 (building) => this.rotateBuilding(building)
             );
             
-            if (clickedBuilding.type === 'tower') {
+            if (clickedBuilding.type === 'tower' || clickedBuilding.type === 'werfer') {
                 this.showAllTowerRanges();
             }
         } else {

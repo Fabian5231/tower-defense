@@ -30,8 +30,8 @@ export default class InfoPanel {
         // Create upgrade button
         this.createUpgradeButton(building, onUpgrade);
         
-        // Create rotation button for non-tower buildings
-        if (building.type !== 'tower') {
+        // Create rotation button for non-combat buildings (farms, factories)
+        if (building.type !== 'tower' && building.type !== 'werfer') {
             this.createRotationButton(building, onRotate);
         }
     }

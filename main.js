@@ -31,6 +31,8 @@ class TowerDefenseGame extends Phaser.Scene {
         this.hoverGraphic = null;
         this.selectedBuilding = null;
         this.infoPanel = null;
+        this.upgradeButton = null;
+        this.upgradeButtonText = null;
         this.showGrid = false;
         this.gridGraphics = null;
         this.selectedBuildingRotation = 0;
@@ -496,25 +498,7 @@ class TowerDefenseGame extends Phaser.Scene {
             this.selectedBuilding = null;
         }
         
-        if (this.infoPanel) {
-            this.infoPanel.destroy();
-            this.infoPanel = null;
-        }
-        
-        if (this.timerText && this.timerText.destroy) {
-            this.timerText.destroy();
-            this.timerText = null;
-        }
-        
-        if (this.rotateButton) {
-            this.rotateButton.destroy();
-            this.rotateButton = null;
-        }
-        
-        if (this.rotateButtonText) {
-            this.rotateButtonText.destroy();
-            this.rotateButtonText = null;
-        }
+        this.clearBuildingInfo();
         
         if (this.hoverGraphic) {
             this.hoverGraphic.destroy();
@@ -1113,12 +1097,53 @@ class TowerDefenseGame extends Phaser.Scene {
     }
     
     showBuildingInfo(building) {
+        // Clean up existing UI elements
+        this.clearBuildingInfo();
+        
+        // Create basic info text
+        let infoText = '';
+        if (building.type === 'tower') {
+            infoText = `Turm - Level ${building.level}\nReichweite: ${building.range}px\nSchaden: ${building.damage}\nHP: ${building.health}/${building.maxHealth}`;
+        } else if (building.type === 'farm') {
+            infoText = `Feld - Level ${building.level}\n+${building.productionAmount} Batzen alle ${building.productionRate / 1000} Sek\nHP: ${building.health}/${building.maxHealth}`;
+        } else if (building.type === 'factory') {
+            infoText = `Fabrik - Level ${building.level}\n(noch keine Funktion)\nHP: ${building.health}/${building.maxHealth}`;
+        }
+        
+        // Create info panel (text only)
+        this.infoPanel = this.add.text(building.x + 50, building.y - 50, infoText, {
+            fontSize: '12px',
+            fill: '#fff',
+            backgroundColor: '#000000',
+            padding: { x: 10, y: 8 }
+        }).setOrigin(0, 0.5);
+        
+        // Create upgrade button
+        this.createUpgradeButton(building);
+        
+        // Create rotation button for non-tower buildings
+        if (building.type !== 'tower') {
+            this.createRotationButton(building);
+        }
+        
+        // Add timer for farms
+        if (building.type === 'farm') {
+            this.createFarmTimer(building);
+        }
+    }
+    
+    clearBuildingInfo() {
         if (this.infoPanel) {
             this.infoPanel.destroy();
+            this.infoPanel = null;
         }
-        if (this.timerText && this.timerText.destroy) {
-            this.timerText.destroy();
-            this.timerText = null;
+        if (this.upgradeButton) {
+            this.upgradeButton.destroy();
+            this.upgradeButton = null;
+        }
+        if (this.upgradeButtonText) {
+            this.upgradeButtonText.destroy();
+            this.upgradeButtonText = null;
         }
         if (this.rotateButton) {
             this.rotateButton.destroy();
@@ -1128,91 +1153,80 @@ class TowerDefenseGame extends Phaser.Scene {
             this.rotateButtonText.destroy();
             this.rotateButtonText = null;
         }
-        
-        let infoText = '';
-        if (building.type === 'tower') {
-            infoText = `Turm - Level ${building.level}\nReichweite: ${building.range}px\nSchaden: ${building.damage}\nHP: ${building.health}/${building.maxHealth}`;
-        } else if (building.type === 'farm') {
-            infoText = `Farm - Level ${building.level}\n+${building.productionAmount} Batzen alle ${building.productionRate / 1000} Sek\nHP: ${building.health}/${building.maxHealth}`;
-        } else if (building.type === 'factory') {
-            infoText = `Fabrik - Level ${building.level}\n(noch keine Funktion)\nHP: ${building.health}/${building.maxHealth}`;
+        if (this.timerText && this.timerText.destroy) {
+            this.timerText.destroy();
+            this.timerText = null;
         }
-        
-        // Add upgrade button for all buildings
+    }
+    
+    createUpgradeButton(building) {
         const maxLevel = this.buildingTypes[building.type].maxLevel;
+        const buttonY = this.infoPanel.y + this.infoPanel.height / 2 + 20;
+        
         if (building.level < maxLevel) {
             const upgradeCost = this.getUpgradeCost(building.type, building.level);
-            infoText += `\n\n⬆️ Upgrade (${upgradeCost}B)`;
+            
+            // Create upgrade button
+            this.upgradeButton = this.add.rectangle(building.x + 50, buttonY, 120, 25, 0x4a4a4a, 0.9);
+            this.upgradeButton.setStrokeStyle(1, 0x666666);
+            this.upgradeButton.setInteractive();
+            this.upgradeButton.setOrigin(0, 0.5);
+            
+            this.upgradeButtonText = this.add.text(building.x + 110, buttonY, `⬆️ Upgrade (${upgradeCost}B)`, {
+                fontSize: '10px',
+                fill: '#fff'
+            }).setOrigin(0.5, 0.5);
+            
+            // Button interactions
+            this.upgradeButton.on('pointerdown', () => {
+                this.upgradeBuilding(building);
+            });
+            
+            this.upgradeButton.on('pointerover', () => {
+                this.upgradeButton.setFillStyle(0x5a5a5a);
+            });
+            
+            this.upgradeButton.on('pointerout', () => {
+                this.upgradeButton.setFillStyle(0x4a4a4a);
+            });
         } else {
-            infoText += '\n\n✨ Max Level';
+            // Max level indicator
+            this.upgradeButtonText = this.add.text(building.x + 50, buttonY, '✨ Max Level', {
+                fontSize: '10px',
+                fill: '#ffd700'
+            }).setOrigin(0, 0.5);
         }
+    }
+    
+    createRotationButton(building) {
+        const buttonY = this.upgradeButton ? 
+            this.upgradeButton.y + 30 : 
+            this.infoPanel.y + this.infoPanel.height / 2 + 20;
         
-        // Add rotation button for non-tower buildings integrated into the info panel
-        if (building.type !== 'tower') {
-            infoText += '\n\n🔄 Drehen (Klicken)';
-        }
+        // Create rotation button
+        this.rotateButton = this.add.rectangle(building.x + 50, buttonY, 120, 25, 0x4a4a4a, 0.9);
+        this.rotateButton.setStrokeStyle(1, 0x666666);
+        this.rotateButton.setInteractive();
+        this.rotateButton.setOrigin(0, 0.5);
         
-        // Für Farms erweitern wir den Text um Timer-Platz
-        if (building.type === 'farm') {
-            infoText += '\n\nTimer: Lade...';
-        }
+        this.rotateButtonText = this.add.text(building.x + 110, buttonY, '🔄 Drehen', {
+            fontSize: '10px',
+            fill: '#fff'
+        }).setOrigin(0.5, 0.5);
         
-        // InfoPanel Container
-        this.infoPanel = this.add.text(building.x + 50, building.y - 30, infoText, {
-            fontSize: '12px',
-            fill: '#fff',
-            backgroundColor: '#000000',
-            padding: { x: 10, y: 8 }
-        }).setOrigin(0, 0.5);
-        
-        // Make the entire info panel clickable for upgrades (and rotation for non-towers)
-        this.infoPanel.setInteractive();
-        this.infoPanel.on('pointerdown', (pointer, localX, localY) => {
-                const panelHeight = this.infoPanel.height;
-                const clickY = localY;
-                
-                // Upgrade area is always in the upper-middle (after building stats, before rotation/timer)
-                const upgradeAreaStart = panelHeight * 0.3;
-                const upgradeAreaEnd = panelHeight * 0.5;
-                
-                // Check for upgrade click first
-                if (clickY >= upgradeAreaStart && clickY <= upgradeAreaEnd) {
-                    this.upgradeBuilding(building);
-                    return;
-                }
-                
-                // Only check rotation for non-tower buildings
-                if (building.type !== 'tower') {
-                    // Different rotation areas based on building type due to different text lengths
-                    let rotationAreaStart, rotationAreaEnd;
-                    if (building.type === 'farm') {
-                        // Farm has more text (includes timer), so rotation button is in smaller area
-                        rotationAreaStart = panelHeight * 0.55;
-                        rotationAreaEnd = panelHeight * 0.75;
-                    } else {
-                        // Factory has less text, so rotation button can be in bottom area
-                        rotationAreaStart = panelHeight * 0.65;
-                        rotationAreaEnd = panelHeight * 0.85;
-                    }
-                    
-                    if (clickY >= rotationAreaStart && clickY <= rotationAreaEnd) {
-                        this.rotateBuilding(building);
-                        this.showBuildingInfo(building); // Refresh info panel
-                    }
-                }
+        // Button interactions
+        this.rotateButton.on('pointerdown', () => {
+            this.rotateBuilding(building);
+            this.showBuildingInfo(building);
         });
         
-        this.infoPanel.on('pointerover', () => {
-            this.infoPanel.setBackgroundColor('#111111'); // Slightly lighter on hover
+        this.rotateButton.on('pointerover', () => {
+            this.rotateButton.setFillStyle(0x5a5a5a);
         });
         
-        this.infoPanel.on('pointerout', () => {
-            this.infoPanel.setBackgroundColor('#000000'); // Back to original
+        this.rotateButton.on('pointerout', () => {
+            this.rotateButton.setFillStyle(0x4a4a4a);
         });
-        
-        if (building.type === 'farm') {
-            this.createFarmTimer(building);
-        }
     }
     
     showEnemyHealthBar(enemy) {

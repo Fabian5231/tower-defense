@@ -41,6 +41,8 @@ export default class InfoPanel {
         
         if (building.type === 'tower') {
             infoText = `Turm - Level ${building.level}\nReichweite: ${building.range}px\nSchaden: ${building.damage}\nHP: ${building.health}/${building.maxHealth}`;
+        } else if (building.type === 'werfer') {
+            infoText = `Werfer - Level ${building.level}\nReichweite: ${building.range}px\nSchaden: ${building.damage}\nHP: ${building.health}/${building.maxHealth}`;
         } else if (building.type === 'farm') {
             if (building.suppliesFactory) {
                 infoText = `Feld - Level ${building.level}\nBeliefert Fabrik\nKeine direkte Produktion\nHP: ${building.health}/${building.maxHealth}`;
@@ -63,6 +65,7 @@ export default class InfoPanel {
         const buttonY = this.elements.infoPanel.y + this.elements.infoPanel.height / 2 + 25;
         const buildingTypes = {
             tower: { maxLevel: 3 },
+            werfer: { maxLevel: 3 },
             farm: { maxLevel: 3 },
             factory: { maxLevel: 3 }
         };
@@ -158,6 +161,7 @@ export default class InfoPanel {
     getUpgradeCost(buildingType, currentLevel) {
         const baseCosts = {
             tower: 10,
+            werfer: 50,
             farm: 10,
             factory: 10
         };

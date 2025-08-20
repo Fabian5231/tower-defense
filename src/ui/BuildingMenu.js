@@ -34,7 +34,7 @@ export default class BuildingMenu {
                 width: 1,
                 height: 1,
                 maxLevel: 3,
-                range: 150 // Massive Range!
+                range: 200 // MASSIVE Range!
             },
             farm: {
                 cost: 10,
@@ -271,6 +271,13 @@ export default class BuildingMenu {
     }
 
     selectBuilding(type) {
+        // ✅ Toggle-Funktion: Wenn das gleiche Gebäude nochmal angeklickt wird
+        if (this.selectedBuildingType === type) {
+            // Deselect current building (Toggle OFF)
+            this.deselectBuilding();
+            return;
+        }
+
         // Deselect previously selected building
         if (this.selectedBuildingType) {
             const prevButtonObj = this.buildingTypes[this.selectedBuildingType].buttonObj;
@@ -333,6 +340,9 @@ export default class BuildingMenu {
                 buttonObj.setSelected(false);
             }
             this.selectedBuildingType = null;
+            
+            // ✅ Informiere das Game-System über die Deselection
+            this.onSelectBuilding(null);
         }
 
         // Range-Preview entfernen

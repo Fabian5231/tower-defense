@@ -177,6 +177,12 @@ export default class TowerDefenseGame extends Phaser.Scene {
             this.hoverGraphic.destroy();
             this.hoverGraphic = null;
         }
+        
+        // ✅ Wenn type null ist (Deselection), auch Range-Preview löschen
+        if (type === null && this.hoverRangeCircle) {
+            this.hoverRangeCircle.destroy();
+            this.hoverRangeCircle = null;
+        }
     }
     
     deselectCurrentBuilding() {

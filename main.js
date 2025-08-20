@@ -131,43 +131,59 @@ class TowerDefenseGame extends Phaser.Scene {
     }
     
     rotateBuilding(building) {
-        if (building.type === 'tower') {
-            return; // Towers are square, no need to rotate
-        }
-        
-        const newRotation = (building.rotation + 90) % 360;
-        const oldDimensions = this.getRotatedDimensions(building.type, building.rotation);
-        const newDimensions = this.getRotatedDimensions(building.type, newRotation);
-        
-        // Free old grid space
-        this.freeGridArea(building.gridX, building.gridY, oldDimensions.width, oldDimensions.height);
-        
-        // Check if new rotation fits
-        if (this.isGridAreaFree(building.gridX, building.gridY, newDimensions.width, newDimensions.height)) {
-            // Occupy new grid space
-            this.occupyGridArea(building.gridX, building.gridY, newDimensions.width, newDimensions.height);
-            
-            // Update building properties
-            building.rotation = newRotation;
-            building.gridWidth = newDimensions.width;
-            building.gridHeight = newDimensions.height;
-            
-            // Update graphics
-            const displayWidth = newDimensions.width * this.gridSize;
-            const displayHeight = newDimensions.height * this.gridSize;
-            
-            building.graphic.setSize(displayWidth, displayHeight);
-            building.healthBarBg.x = building.x;
-            building.healthBarBg.y = building.y - displayHeight/2 - 10;
-            building.healthBarBg.setSize(displayWidth + 2, 6);
-            building.healthBar.x = building.x;
-            building.healthBar.y = building.y - displayHeight/2 - 10;
-            building.healthBar.setSize(displayWidth, 4);
-        } else {
-            // Re-occupy old space if rotation failed
-            this.occupyGridArea(building.gridX, building.gridY, oldDimensions.width, oldDimensions.height);
-        }
+    if (building.type === 'tower') {
+        return; // Towers are square, no need to rotate
     }
+
+    const newRotation = (building.rotation + 90) % 360;
+    const oldDimensions = this.getRotatedDimensions(building.type, building.rotation);
+    const newDimensions = this.getRotatedDimensions(building.type, newRotation);
+
+    // Free old grid space
+    this.freeGridArea(building.gridX, building.gridY, oldDimensions.width, oldDimensions.height);
+
+    // Check if new rotation fits
+    if (this.isGridAreaFree(building.gridX, building.gridY, newDimensions.width, newDimensions.height)) {
+        // Occupy new grid space
+        this.occupyGridArea(building.gridX, building.gridY, newDimensions.width, newDimensions.height);
+
+        // Update building properties
+        building.rotation = newRotation;
+        building.gridWidth = newDimensions.width;
+        building.gridHeight = newDimensions.height;
+
+        // 🔥 NEU: Weltposition anhand der neuen Dimensionen berechnen
+        const newWorldPos = this.gridToWorldForBuilding(
+            building.gridX,
+            building.gridY,
+            newDimensions.width,
+            newDimensions.height
+        );
+
+        building.x = newWorldPos.x;
+        building.y = newWorldPos.y;
+
+        // Update graphics
+        const displayWidth = newDimensions.width * this.gridSize;
+        const displayHeight = newDimensions.height * this.gridSize;
+
+        building.graphic.setSize(displayWidth, displayHeight);
+        building.graphic.setPosition(newWorldPos.x, newWorldPos.y);
+
+        if (building.symbol) {
+            building.symbol.setPosition(newWorldPos.x, newWorldPos.y);
+        }
+
+        building.healthBarBg.setSize(displayWidth + 2, 6);
+        building.healthBarBg.setPosition(newWorldPos.x, newWorldPos.y - displayHeight / 2 - 10);
+
+        building.healthBar.setSize(displayWidth, 4);
+        building.healthBar.setPosition(newWorldPos.x, newWorldPos.y - displayHeight / 2 - 10);
+    } else {
+        // Re-occupy old space if rotation failed
+        this.occupyGridArea(building.gridX, building.gridY, oldDimensions.width, oldDimensions.height);
+    }
+}
 
     preload() {
         this.load.image('pixel', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==');
@@ -404,7 +420,12 @@ class TowerDefenseGame extends Phaser.Scene {
         const building = this.buildingTypes[type];
         const dimensions = this.getRotatedDimensions(type, this.selectedBuildingRotation);
         const gridPos = this.worldToGrid(x, y);
-        const worldPos = this.gridToWorld(gridPos.x, gridPos.y);
+        const worldPos = this.gridToWorldForBuilding(
+    gridPos.x,
+    gridPos.y,
+    dimensions.width,
+    dimensions.height
+);
         
         const canAfford = this.currency >= building.cost;
         const canPlace = this.isGridAreaFree(gridPos.x, gridPos.y, dimensions.width, dimensions.height);
@@ -417,12 +438,24 @@ class TowerDefenseGame extends Phaser.Scene {
         this.hoverGraphic = this.add.rectangle(worldPos.x, worldPos.y, displayWidth, displayHeight, color, alpha);
         this.hoverGraphic.setStrokeStyle(2, color, 0.8);
     }
+
+    gridToWorldForBuilding(gridX, gridY, width, height) {
+    return {
+        x: (gridX + width / 2) * this.gridSize,
+        y: (gridY + height / 2) * this.gridSize
+    };
+}
     
     tryPlaceBuilding(x, y, type) {
         const building = this.buildingTypes[type];
         const dimensions = this.getRotatedDimensions(type, this.selectedBuildingRotation);
         const gridPos = this.worldToGrid(x, y);
-        const worldPos = this.gridToWorld(gridPos.x, gridPos.y);
+        const worldPos = this.gridToWorldForBuilding(
+    gridPos.x,
+    gridPos.y,
+    dimensions.width,
+    dimensions.height
+);
         
         const canAfford = this.currency >= building.cost;
         const canPlace = this.isGridAreaFree(gridPos.x, gridPos.y, dimensions.width, dimensions.height);

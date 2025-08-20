@@ -882,30 +882,43 @@ class TowerDefenseGame extends Phaser.Scene {
     }
     
     findNearestEnemy(tower) {
-        let nearest = null;
-        let nearestDistance = tower.range;
+        let bestTarget = null;
+        let shortestDistanceToTownHall = Infinity;
         
         this.enemies.forEach(enemy => {
-            const distance = Math.sqrt(
+            // Check if enemy is in range of tower
+            const distanceToTower = Math.sqrt(
                 (enemy.x - tower.x) * (enemy.x - tower.x) + 
                 (enemy.y - tower.y) * (enemy.y - tower.y)
             );
-            if (distance < nearestDistance) {
-                nearest = enemy;
-                nearestDistance = distance;
+            
+            if (distanceToTower <= tower.range) {
+                // Calculate distance from enemy to town hall
+                const distanceToTownHall = Math.sqrt(
+                    (enemy.x - this.townHall.x) * (enemy.x - this.townHall.x) + 
+                    (enemy.y - this.townHall.y) * (enemy.y - this.townHall.y)
+                );
+                
+                // Prioritize enemy closest to town hall
+                if (distanceToTownHall < shortestDistanceToTownHall) {
+                    bestTarget = enemy;
+                    shortestDistanceToTownHall = distanceToTownHall;
+                }
             }
         });
         
-        return nearest;
+        return bestTarget;
     }
     
     fireTower(tower, target) {
+        // Create visual projectile for effect
         const projectile = {
             x: tower.x,
             y: tower.y,
             targetX: target.x,
             targetY: target.y,
-            speed: 200,
+            target: target, // Reference to target for guaranteed hit
+            speed: 300, // Faster projectiles
             damage: tower.damage,
             graphic: this.add.circle(tower.x, tower.y, 3, 0xffff00)
         };
@@ -915,14 +928,34 @@ class TowerDefenseGame extends Phaser.Scene {
     
     moveProjectiles(delta) {
         this.projectiles.forEach(projectile => {
+            // Update target position if target still exists
+            if (projectile.target && !projectile.target.toRemove) {
+                projectile.targetX = projectile.target.x;
+                projectile.targetY = projectile.target.y;
+            }
+            
             const direction = {
                 x: projectile.targetX - projectile.x,
                 y: projectile.targetY - projectile.y
             };
             const distance = Math.sqrt(direction.x * direction.x + direction.y * direction.y);
             
-            if (distance < 5) {
+            if (distance < 8) { // Slightly larger hit detection
                 projectile.toRemove = true;
+                
+                // Guaranteed hit - damage the target if it still exists
+                if (projectile.target && !projectile.target.toRemove) {
+                    projectile.target.health -= projectile.damage;
+                    this.showEnemyHealthBar(projectile.target);
+                    
+                    if (projectile.target.health <= 0) {
+                        projectile.target.toRemove = true;
+                        this.score += projectile.target.isBoss ? 50 : 10;
+                        this.currency += projectile.target.goldReward;
+                        this.scoreText.setText(`Punkte: ${this.score}`);
+                        this.currencyText.setText(`Batzen: ${this.currency}`);
+                    }
+                }
                 return;
             }
             
@@ -938,29 +971,7 @@ class TowerDefenseGame extends Phaser.Scene {
     }
     
     checkCollisions() {
-        this.projectiles.forEach(projectile => {
-            this.enemies.forEach(enemy => {
-                const distance = Math.sqrt(
-                    (enemy.x - projectile.x) * (enemy.x - projectile.x) + 
-                    (enemy.y - projectile.y) * (enemy.y - projectile.y)
-                );
-                
-                if (distance < 15) {
-                    enemy.health -= projectile.damage;
-                    projectile.toRemove = true;
-                    
-                    this.showEnemyHealthBar(enemy);
-                    
-                    if (enemy.health <= 0) {
-                        enemy.toRemove = true;
-                        this.score += enemy.isBoss ? 50 : 10;
-                        this.currency += enemy.goldReward;
-                        this.scoreText.setText(`Punkte: ${this.score}`);
-                        this.currencyText.setText(`Batzen: ${this.currency}`);
-                    }
-                }
-            });
-        });
+        // Collision detection is now handled in moveProjectiles for guaranteed hits
     }
     
     removeDeadObjects() {

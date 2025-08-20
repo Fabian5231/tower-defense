@@ -306,12 +306,24 @@ class TowerDefenseGame extends Phaser.Scene {
         };
         
         const townHallSize = 3 * this.gridSize;
-        const townHallGraphic = this.add.rectangle(townHallWorldPos.x, townHallWorldPos.y, townHallSize, townHallSize, 0x8b4513);
-        townHallGraphic.setStrokeStyle(4, 0x654321);
+        
+        // Main townhall building with gradient-like effect using multiple rectangles
+        const townHallGraphic = this.add.rectangle(townHallWorldPos.x, townHallWorldPos.y, townHallSize, townHallSize, 0xd4af37); // Gold color
+        townHallGraphic.setStrokeStyle(4, 0xb8860b); // Dark golden rod border
+        
+        // Inner decorative rectangle for depth
+        const innerRect = this.add.rectangle(townHallWorldPos.x, townHallWorldPos.y, townHallSize - 8, townHallSize - 8, 0xffd700); // Brighter gold
+        innerRect.setStrokeStyle(2, 0xdaa520); // Golden rod inner border
+        
+        // Crown symbol with shadow effect
+        this.add.text(townHallWorldPos.x + 1, townHallWorldPos.y - 4, '👑', { 
+            fontSize: '32px',
+            fill: '#000000'
+        }).setOrigin(0.5); // Shadow
         
         this.add.text(townHallWorldPos.x, townHallWorldPos.y - 5, '👑', { 
             fontSize: '32px' 
-        }).setOrigin(0.5);
+        }).setOrigin(0.5); // Main crown
         
         this.townHallHealthBarBg = this.add.rectangle(townHallWorldPos.x, townHallWorldPos.y - townHallSize/2 - 15, townHallSize + 2, 10, 0x666666);
         this.townHallHealthBar = this.add.rectangle(townHallWorldPos.x, townHallWorldPos.y - townHallSize/2 - 15, townHallSize, 8, 0x00ff00);
@@ -1071,14 +1083,14 @@ class TowerDefenseGame extends Phaser.Scene {
             infoText = `Fabrik\n(noch keine Funktion)\nHP: ${building.health}/${building.maxHealth}`;
         }
         
-        // Für Farms erweitern wir den Text um Timer-Platz
-        if (building.type === 'farm') {
-            infoText += '\n\nTimer: Lade...';
-        }
-        
         // Add rotation button for non-tower buildings integrated into the info panel
         if (building.type !== 'tower') {
             infoText += '\n\n🔄 Drehen (Klicken)';
+        }
+        
+        // Für Farms erweitern wir den Text um Timer-Platz
+        if (building.type === 'farm') {
+            infoText += '\n\nTimer: Lade...';
         }
         
         // InfoPanel Container
@@ -1093,11 +1105,22 @@ class TowerDefenseGame extends Phaser.Scene {
             // Make the entire info panel clickable for rotation
             this.infoPanel.setInteractive();
             this.infoPanel.on('pointerdown', (pointer, localX, localY) => {
-                // Check if click is in the rotation area (bottom part of panel)
+                // Check if click is in the rotation area
                 const panelHeight = this.infoPanel.height;
                 const clickY = localY;
                 
-                if (clickY > panelHeight * 0.7) { // Bottom 30% of panel is rotation area
+                // For farms, rotation area is in the middle (after building info, before timer)
+                // For other buildings, rotation area is at the bottom
+                let rotationAreaStart, rotationAreaEnd;
+                if (building.type === 'farm') {
+                    rotationAreaStart = panelHeight * 0.45; // Middle area for farms
+                    rotationAreaEnd = panelHeight * 0.65;
+                } else {
+                    rotationAreaStart = panelHeight * 0.7; // Bottom area for other buildings
+                    rotationAreaEnd = panelHeight;
+                }
+                
+                if (clickY >= rotationAreaStart && clickY <= rotationAreaEnd) {
                     this.rotateBuilding(building);
                     this.showBuildingInfo(building); // Refresh info panel
                 }

@@ -282,6 +282,81 @@ class TowerDefenseGame extends Phaser.Scene {
         this.showBuildingInfo(building);
     }
     
+    getAdjacentBuildings(building) {
+        const adjacent = [];
+        const buildingGridPositions = [];
+        
+        // Get all grid positions this building occupies
+        for (let y = building.gridY; y < building.gridY + building.gridHeight; y++) {
+            for (let x = building.gridX; x < building.gridX + building.gridWidth; x++) {
+                buildingGridPositions.push({x, y});
+            }
+        }
+        
+        // Check all other buildings
+        this.buildings.forEach(otherBuilding => {
+            if (otherBuilding === building) return;
+            
+            // Get all grid positions the other building occupies
+            const otherGridPositions = [];
+            for (let y = otherBuilding.gridY; y < otherBuilding.gridY + otherBuilding.gridHeight; y++) {
+                for (let x = otherBuilding.gridX; x < otherBuilding.gridX + otherBuilding.gridWidth; x++) {
+                    otherGridPositions.push({x, y});
+                }
+            }
+            
+            // Check if any positions are adjacent (directly touching)
+            let isAdjacent = false;
+            buildingGridPositions.forEach(pos1 => {
+                otherGridPositions.forEach(pos2 => {
+                    const dx = Math.abs(pos1.x - pos2.x);
+                    const dy = Math.abs(pos1.y - pos2.y);
+                    // Adjacent means one tile away in any direction (including diagonal)
+                    if ((dx === 1 && dy === 0) || (dx === 0 && dy === 1) || (dx === 1 && dy === 1)) {
+                        isAdjacent = true;
+                    }
+                });
+            });
+            
+            if (isAdjacent) {
+                adjacent.push(otherBuilding);
+            }
+        });
+        
+        return adjacent;
+    }
+    
+    updateSupplyChains() {
+        // Reset all supply relationships
+        this.buildings.forEach(building => {
+            if (building.type === 'farm') {
+                building.suppliesFactory = false;
+            } else if (building.type === 'factory') {
+                building.suppliedBy = [];
+                building.productionAmount = 0;
+            }
+        });
+        
+        // Update factory supply chains
+        this.buildings.forEach(building => {
+            if (building.type === 'factory') {
+                const adjacent = this.getAdjacentBuildings(building);
+                const supplierFarms = adjacent.filter(adj => adj.type === 'farm');
+                
+                building.suppliedBy = supplierFarms;
+                
+                // Calculate factory production based on suppliers
+                let totalProduction = 0;
+                supplierFarms.forEach(farm => {
+                    farm.suppliesFactory = true;
+                    totalProduction += farm.productionAmount * 1.5; // 1.5x multiplier
+                });
+                
+                building.productionAmount = Math.floor(totalProduction);
+            }
+        });
+    }
+
     applyLevelUpgrades(building) {
         const level = building.level;
         
@@ -643,6 +718,7 @@ class TowerDefenseGame extends Phaser.Scene {
             lastProduction: this.time.now,
             productionRate: 30000,
             productionAmount: 5,
+            suppliesFactory: false, // Whether this farm supplies a factory
             graphic: this.add.rectangle(x, y, displayWidth, displayHeight, 0x8b4513),
             symbol: this.add.text(x, y, '🌾', { fontSize: '20px' }).setOrigin(0.5),
             healthBarBg: this.add.rectangle(x, y - displayHeight/2 - 10, displayWidth + 2, 6, 0x666666),
@@ -673,6 +749,10 @@ class TowerDefenseGame extends Phaser.Scene {
             health: 150,
             maxHealth: 150,
             type: 'factory',
+            suppliedBy: [], // Array of buildings that supply this factory
+            lastProduction: this.time.now,
+            productionRate: 30000, // Same base rate as farms
+            productionAmount: 0, // Will be calculated based on suppliers
             graphic: this.add.rectangle(x, y, displayWidth, displayHeight, 0x666666),
             symbol: this.add.text(x, y, '🏭', { fontSize: '18px' }).setOrigin(0.5),
             healthBarBg: this.add.rectangle(x, y - displayHeight/2 - 10, displayWidth + 2, 6, 0x666666),
@@ -724,7 +804,9 @@ class TowerDefenseGame extends Phaser.Scene {
         this.spawnEnemies(time);
         this.moveEnemies(delta);
         this.updateTowers(time);
+        this.updateSupplyChains(); // Update supply chains every frame
         this.updateFarms(time);
+        this.updateFactories(time);
         this.updateFarmTimer(time);
         this.moveProjectiles(delta);
         this.checkCollisions();
@@ -1024,7 +1106,8 @@ class TowerDefenseGame extends Phaser.Scene {
     
     updateFarms(time) {
         this.buildings.forEach(building => {
-            if (building.type === 'farm') {
+            if (building.type === 'farm' && !building.suppliesFactory) {
+                // Only produce gold if farm is not supplying a factory
                 if (time - building.lastProduction > building.productionRate) {
                     this.currency += building.productionAmount;
                     this.currencyText.setText(`Batzen: ${this.currency}`);
@@ -1048,13 +1131,41 @@ class TowerDefenseGame extends Phaser.Scene {
         });
     }
     
+    updateFactories(time) {
+        this.buildings.forEach(building => {
+            if (building.type === 'factory' && building.productionAmount > 0) {
+                // Only produce if factory has suppliers
+                if (time - building.lastProduction > building.productionRate) {
+                    this.currency += building.productionAmount;
+                    this.currencyText.setText(`Batzen: ${this.currency}`);
+                    building.lastProduction = time;
+                    
+                    const coinText = this.add.text(building.x, building.y - 40, `+${building.productionAmount}`, {
+                        fontSize: '14px',
+                        fill: '#00ff00', // Green for factory production
+                        fontStyle: 'bold'
+                    }).setOrigin(0.5);
+                    
+                    this.tweens.add({
+                        targets: coinText,
+                        y: building.y - 60,
+                        alpha: 0,
+                        duration: 1500,
+                        onComplete: () => coinText.destroy()
+                    });
+                }
+            }
+        });
+    }
+    
     createFarmTimer(farm) {
         // Timer-Text wird direkt im Info-Panel integriert - kein separates Element nötig
         this.timerText = { isIntegrated: true };
     }
     
     updateFarmTimer(time) {
-        if (this.selectedBuilding && this.selectedBuilding.type === 'farm' && this.infoPanel) {
+        if (this.selectedBuilding && this.selectedBuilding.type === 'farm' && this.infoPanel && !this.selectedBuilding.suppliesFactory) {
+            // Only show timer for farms that are not supplying factories
             const farm = this.selectedBuilding;
             const timeSinceLastProduction = time - farm.lastProduction;
             const timeRemaining = Math.max(0, farm.productionRate - timeSinceLastProduction);
@@ -1116,9 +1227,22 @@ class TowerDefenseGame extends Phaser.Scene {
         if (building.type === 'tower') {
             infoText = `Turm - Level ${building.level}\nReichweite: ${building.range}px\nSchaden: ${building.damage}\nHP: ${building.health}/${building.maxHealth}`;
         } else if (building.type === 'farm') {
-            infoText = `Feld - Level ${building.level}\n+${building.productionAmount} Batzen alle ${building.productionRate / 1000} Sek\nHP: ${building.health}/${building.maxHealth}\n\nTimer: Lade...`;
+            if (building.suppliesFactory) {
+                infoText = `Feld - Level ${building.level}\nBeliefert Fabrik\nKeine direkte Produktion\nHP: ${building.health}/${building.maxHealth}`;
+            } else {
+                infoText = `Feld - Level ${building.level}\n+${building.productionAmount} Batzen alle ${building.productionRate / 1000} Sek\nHP: ${building.health}/${building.maxHealth}\n\nTimer: Lade...`;
+            }
         } else if (building.type === 'factory') {
-            infoText = `Fabrik - Level ${building.level}\n(noch keine Funktion)\nHP: ${building.health}/${building.maxHealth}`;
+            if (building.suppliedBy.length > 0) {
+                const supplierNames = building.suppliedBy.map(supplier => {
+                    if (supplier.type === 'farm') return 'Feld';
+                    return supplier.type;
+                });
+                const supplierText = supplierNames.join(', ');
+                infoText = `Fabrik - Level ${building.level}\n+${building.productionAmount} Batzen alle ${building.productionRate / 1000} Sek\nBeliefert durch: ${supplierNames.length} ${supplierNames.length === 1 ? 'Feld' : 'Felder'}\nHP: ${building.health}/${building.maxHealth}`;
+            } else {
+                infoText = `Fabrik - Level ${building.level}\nKeine Belieferung\nKeine Produktion\nHP: ${building.health}/${building.maxHealth}`;
+            }
         }
         
         // Create info panel (text only)
@@ -1137,7 +1261,7 @@ class TowerDefenseGame extends Phaser.Scene {
             this.createRotationButton(building);
         }
         
-        // Timer for farms is now integrated into the main info text
+        // Timer for farms is now integrated into the main info text (only for non-supplying farms)
     }
     
     clearBuildingInfo() {

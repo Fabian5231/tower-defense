@@ -13,6 +13,13 @@ export default class Enemy {
         this.size = this.isBoss ? 35 : 20;
         this.color = this.isBoss ? 0x800080 : 0xff0000;
         
+        // Pathfinding properties
+        this.path = []; // Current path to follow
+        this.currentPathIndex = 0;
+        this.pathRecalculateTimer = 0;
+        this.pathRecalculateInterval = 1000; // Recalculate path every 1 second
+        this.lastKnownTarget = null;
+        
         // Flags
         this.toRemove = false;
         
@@ -52,14 +59,13 @@ export default class Enemy {
         this.healthBar.setVisible(false);
     }
     
-    update(delta, townHall, gameSpeed, terrainManager = null) {
+    update(delta, townHall, gameSpeed, terrainManager = null, pathfindingManager = null) {
         if (this.toRemove) return;
         
-        const direction = {
-            x: townHall.x - this.x,
-            y: townHall.y - this.y
-        };
-        const distance = Math.sqrt(direction.x * direction.x + direction.y * direction.y);
+        const distance = Math.sqrt(
+            (townHall.x - this.x) * (townHall.x - this.x) + 
+            (townHall.y - this.y) * (townHall.y - this.y)
+        );
         
         // Check collision with town hall
         if (distance < townHall.radius + 10) {
@@ -67,9 +73,83 @@ export default class Enemy {
             return { hitTownHall: true, damage: 10 };
         }
         
-        // Move towards town hall
-        direction.x /= distance;
-        direction.y /= distance;
+        // Use pathfinding if available
+        if (pathfindingManager && terrainManager) {
+            this.updateWithPathfinding(delta, townHall, gameSpeed, terrainManager, pathfindingManager);
+        } else {
+            // Fallback to direct movement
+            this.updateDirectMovement(delta, townHall, gameSpeed, terrainManager);
+        }
+        
+        this.updateGraphics();
+        
+        return { hitTownHall: false };
+    }
+    
+    updateWithPathfinding(delta, townHall, gameSpeed, terrainManager, pathfindingManager) {
+        this.pathRecalculateTimer += delta;
+        
+        // Recalculate path periodically or if we don't have one
+        const targetChanged = !this.lastKnownTarget || 
+            this.lastKnownTarget.x !== townHall.x || 
+            this.lastKnownTarget.y !== townHall.y;
+            
+        if (this.path.length === 0 || this.pathRecalculateTimer > this.pathRecalculateInterval || targetChanged) {
+            this.calculateNewPath(townHall, pathfindingManager);
+            this.pathRecalculateTimer = 0;
+            this.lastKnownTarget = { x: townHall.x, y: townHall.y };
+        }
+        
+        if (this.path.length > 0) {
+            this.followPath(delta, gameSpeed, terrainManager);
+        } else {
+            // No path found, try direct movement as fallback
+            this.updateDirectMovement(delta, townHall, gameSpeed, terrainManager);
+        }
+    }
+    
+    calculateNewPath(townHall, pathfindingManager) {
+        const startPos = { x: this.x, y: this.y };
+        const goalPos = { x: townHall.x, y: townHall.y };
+        
+        this.path = pathfindingManager.findPathOptimized(startPos, goalPos);
+        this.currentPathIndex = 0;
+        
+        // Remove the first point if it's too close to current position
+        if (this.path.length > 0) {
+            const firstPoint = this.path[0];
+            const distToFirst = Math.sqrt(
+                (firstPoint.x - this.x) * (firstPoint.x - this.x) +
+                (firstPoint.y - this.y) * (firstPoint.y - this.y)
+            );
+            if (distToFirst < 10) {
+                this.currentPathIndex = 1;
+            }
+        }
+    }
+    
+    followPath(delta, gameSpeed, terrainManager) {
+        if (this.currentPathIndex >= this.path.length) {
+            this.path = []; // Path completed
+            return;
+        }
+        
+        const target = this.path[this.currentPathIndex];
+        const direction = {
+            x: target.x - this.x,
+            y: target.y - this.y
+        };
+        const distanceToTarget = Math.sqrt(direction.x * direction.x + direction.y * direction.y);
+        
+        // If we're close enough to the current waypoint, move to next one
+        if (distanceToTarget < 8) {
+            this.currentPathIndex++;
+            return;
+        }
+        
+        // Move towards current waypoint
+        direction.x /= distanceToTarget;
+        direction.y /= distanceToTarget;
         
         // Apply terrain movement modifier
         let effectiveSpeed = this.speed * gameSpeed;
@@ -82,10 +162,46 @@ export default class Enemy {
         
         this.x += direction.x * effectiveSpeed * (delta / 1000);
         this.y += direction.y * effectiveSpeed * (delta / 1000);
+    }
+    
+    updateDirectMovement(delta, townHall, gameSpeed, terrainManager) {
+        const direction = {
+            x: townHall.x - this.x,
+            y: townHall.y - this.y
+        };
+        const distance = Math.sqrt(direction.x * direction.x + direction.y * direction.y);
         
-        this.updateGraphics();
+        // Move towards town hall
+        direction.x /= distance;
+        direction.y /= distance;
         
-        return { hitTownHall: false };
+        // Apply terrain movement modifier
+        let effectiveSpeed = this.speed * gameSpeed;
+        if (terrainManager) {
+            const gridX = Math.floor(this.x / 30); // gridSize is 30
+            const gridY = Math.floor(this.y / 30);
+            const modifier = terrainManager.getMovementModifier(gridX, gridY);
+            effectiveSpeed *= modifier;
+            
+            // If blocked by mountain, try to avoid it
+            if (modifier === 0) {
+                this.avoidObstacle(direction, effectiveSpeed, delta);
+                return;
+            }
+        }
+        
+        this.x += direction.x * effectiveSpeed * (delta / 1000);
+        this.y += direction.y * effectiveSpeed * (delta / 1000);
+    }
+    
+    avoidObstacle(direction, effectiveSpeed, delta) {
+        // Simple obstacle avoidance: try perpendicular directions
+        const perp1 = { x: -direction.y, y: direction.x };
+        const perp2 = { x: direction.y, y: -direction.x };
+        
+        // Try both perpendicular directions, use the first one that works
+        this.x += perp1.x * effectiveSpeed * (delta / 1000) * 0.5;
+        this.y += perp1.y * effectiveSpeed * (delta / 1000) * 0.5;
     }
     
     updateGraphics() {

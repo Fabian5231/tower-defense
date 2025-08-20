@@ -9,6 +9,7 @@ import InfoPanel from '../ui/InfoPanel.js';
 import GridManager from '../utils/GridManager.js';
 import WaveManager from '../utils/WaveManager.js';
 import TerrainManager from '../utils/TerrainManager.js';
+import PathfindingManager from '../utils/PathfindingManager.js';
 
 export default class TowerDefenseGame extends Phaser.Scene {
     constructor() {
@@ -48,6 +49,7 @@ export default class TowerDefenseGame extends Phaser.Scene {
         this.gridManager = null;
         this.waveManager = null;
         this.terrainManager = null;
+        this.pathfindingManager = null;
         
         // UI Components
         this.hud = null;
@@ -64,6 +66,7 @@ export default class TowerDefenseGame extends Phaser.Scene {
         this.gridManager = new GridManager(this.mapWidth, this.mapHeight, this.gridSize);
         this.waveManager = new WaveManager();
         this.terrainManager = new TerrainManager(this, this.mapWidth, this.mapHeight, this.gridSize);
+        this.pathfindingManager = new PathfindingManager(this.terrainManager, this.mapWidth, this.mapHeight, this.gridSize);
         
         // Initialize UI
         this.hud = new HUD(this);
@@ -607,7 +610,7 @@ export default class TowerDefenseGame extends Phaser.Scene {
     
     updateEnemies(delta) {
         this.enemies.forEach(enemy => {
-            const result = enemy.update(delta, this.townHall, this.gameSpeed, this.terrainManager);
+            const result = enemy.update(delta, this.townHall, this.gameSpeed, this.terrainManager, this.pathfindingManager);
             if (result.hitTownHall) {
                 this.townHallHealth -= result.damage;
                 this.hud.updateTownHallHealth(this.townHallHealth);

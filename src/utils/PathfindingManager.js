@@ -31,6 +31,7 @@ export default class PathfindingManager {
             return [];
         }
         
+        
         // A* Datenstrukturen
         const openSet = []; // Knoten zum Untersuchen
         const closedSet = new Set(); // Bereits untersuchte Knoten
@@ -242,12 +243,84 @@ export default class PathfindingManager {
      * Optimierter Pfad für häufige Start->Ziel Kombinationen
      */
     findPathOptimized(startWorld, goalWorld) {
-        const start = this.worldToGrid(startWorld.x, startWorld.y);
+        let start = this.worldToGrid(startWorld.x, startWorld.y);
         const goal = this.worldToGrid(goalWorld.x, goalWorld.y);
+        
+        // Handle spawn points outside the map
+        if (!this.isValidPosition(start.x, start.y)) {
+            start = this.findNearestValidPosition(startWorld, goalWorld);
+        }
         
         const gridPath = this.findPath(start, goal);
         
-        // Konvertiere Grid-Pfad zu Welt-Koordinaten
-        return gridPath.map(point => this.gridToWorld(point.x, point.y));
+        // If spawning outside map, add the original spawn point as first waypoint
+        let worldPath = gridPath.map(point => this.gridToWorld(point.x, point.y));
+        
+        if (worldPath.length > 0 && !this.isValidPosition(this.worldToGrid(startWorld.x, startWorld.y).x, this.worldToGrid(startWorld.x, startWorld.y).y)) {
+            worldPath.unshift({ x: startWorld.x, y: startWorld.y });
+        }
+        
+        return worldPath;
+    }
+    
+    findNearestValidPosition(startWorld, goalWorld) {
+        // Find the nearest position on the map edge that's walkable
+        const centerX = this.mapWidth / 2;
+        const centerY = this.mapHeight / 2;
+        
+        let bestPos = null;
+        let bestDistance = Infinity;
+        
+        // Check all edge positions
+        const edgePositions = [];
+        
+        // Top and bottom edges
+        for (let x = 0; x < this.cols; x++) {
+            edgePositions.push({ x, y: 0 });
+            edgePositions.push({ x, y: this.rows - 1 });
+        }
+        
+        // Left and right edges
+        for (let y = 0; y < this.rows; y++) {
+            edgePositions.push({ x: 0, y });
+            edgePositions.push({ x: this.cols - 1, y });
+        }
+        
+        // Find the closest walkable edge position
+        for (const pos of edgePositions) {
+            if (this.isWalkable(pos.x, pos.y)) {
+                const worldPos = this.gridToWorld(pos.x, pos.y);
+                const distToGoal = Math.sqrt(
+                    (worldPos.x - goalWorld.x) * (worldPos.x - goalWorld.x) +
+                    (worldPos.y - goalWorld.y) * (worldPos.y - goalWorld.y)
+                );
+                
+                if (distToGoal < bestDistance) {
+                    bestDistance = distToGoal;
+                    bestPos = pos;
+                }
+            }
+        }
+        
+        // Fallback to center if no edge position is walkable
+        if (!bestPos) {
+            const centerGrid = this.worldToGrid(centerX, centerY);
+            if (this.isWalkable(centerGrid.x, centerGrid.y)) {
+                bestPos = centerGrid;
+            } else {
+                // Last resort: find any walkable position
+                for (let y = 0; y < this.rows; y++) {
+                    for (let x = 0; x < this.cols; x++) {
+                        if (this.isWalkable(x, y)) {
+                            bestPos = { x, y };
+                            break;
+                        }
+                    }
+                    if (bestPos) break;
+                }
+            }
+        }
+        
+        return bestPos || { x: Math.floor(this.cols / 2), y: Math.floor(this.rows / 2) };
     }
 }

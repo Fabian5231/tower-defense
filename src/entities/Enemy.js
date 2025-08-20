@@ -98,6 +98,7 @@ export default class Enemy {
             this.calculateNewPath(townHall, pathfindingManager);
             this.pathRecalculateTimer = 0;
             this.lastKnownTarget = { x: townHall.x, y: townHall.y };
+            
         }
         
         if (this.path.length > 0) {
@@ -185,7 +186,7 @@ export default class Enemy {
             
             // If blocked by mountain, try to avoid it
             if (modifier === 0) {
-                this.avoidObstacle(direction, effectiveSpeed, delta);
+                this.avoidObstacleImproved(direction, effectiveSpeed, delta, terrainManager);
                 return;
             }
         }
@@ -194,14 +195,32 @@ export default class Enemy {
         this.y += direction.y * effectiveSpeed * (delta / 1000);
     }
     
-    avoidObstacle(direction, effectiveSpeed, delta) {
-        // Simple obstacle avoidance: try perpendicular directions
-        const perp1 = { x: -direction.y, y: direction.x };
-        const perp2 = { x: direction.y, y: -direction.x };
+    avoidObstacleImproved(direction, effectiveSpeed, delta, terrainManager) {
+        // Improved obstacle avoidance: try multiple directions
+        const directions = [
+            { x: -direction.y, y: direction.x },    // perpendicular left
+            { x: direction.y, y: -direction.x },    // perpendicular right
+            { x: -direction.x * 0.7 - direction.y * 0.7, y: -direction.y * 0.7 + direction.x * 0.7 }, // back-left
+            { x: -direction.x * 0.7 + direction.y * 0.7, y: -direction.y * 0.7 - direction.x * 0.7 }, // back-right
+        ];
         
-        // Try both perpendicular directions, use the first one that works
-        this.x += perp1.x * effectiveSpeed * (delta / 1000) * 0.5;
-        this.y += perp1.y * effectiveSpeed * (delta / 1000) * 0.5;
+        for (const testDir of directions) {
+            const testX = this.x + testDir.x * 15; // Test 15 pixels ahead
+            const testY = this.y + testDir.y * 15;
+            const testGridX = Math.floor(testX / 30);
+            const testGridY = Math.floor(testY / 30);
+            
+            if (terrainManager.getMovementModifier(testGridX, testGridY) > 0) {
+                // This direction is not blocked, use it
+                this.x += testDir.x * effectiveSpeed * (delta / 1000) * 0.7;
+                this.y += testDir.y * effectiveSpeed * (delta / 1000) * 0.7;
+                return;
+            }
+        }
+        
+        // If all directions are blocked, try moving backwards
+        this.x -= direction.x * effectiveSpeed * (delta / 1000) * 0.3;
+        this.y -= direction.y * effectiveSpeed * (delta / 1000) * 0.3;
     }
     
     updateGraphics() {

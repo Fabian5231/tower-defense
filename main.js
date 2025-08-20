@@ -1043,7 +1043,7 @@ class TowerDefenseGame extends Phaser.Scene {
     }
     
     updateFarmTimer(time) {
-        if (this.selectedBuilding && this.selectedBuilding.type === 'farm' && this.timerText && this.infoPanel) {
+        if (this.selectedBuilding && this.selectedBuilding.type === 'farm' && this.infoPanel) {
             const farm = this.selectedBuilding;
             const timeSinceLastProduction = time - farm.lastProduction;
             const timeRemaining = Math.max(0, farm.productionRate - timeSinceLastProduction);
@@ -1057,7 +1057,7 @@ class TowerDefenseGame extends Phaser.Scene {
             }
             
             // Update den gesamten Info-Panel Text mit Timer-Information
-            const baseText = `Farm\n+${farm.productionAmount} Batzen alle ${farm.productionRate / 1000} Sek\nHP: ${farm.health}/${farm.maxHealth}`;
+            const baseText = `Feld - Level ${farm.level}\n+${farm.productionAmount} Batzen alle ${farm.productionRate / 1000} Sek\nHP: ${farm.health}/${farm.maxHealth}`;
             const fullText = `${baseText}\n\n${timerInfo}`;
             
             this.infoPanel.setText(fullText);
@@ -1100,12 +1100,12 @@ class TowerDefenseGame extends Phaser.Scene {
         // Clean up existing UI elements
         this.clearBuildingInfo();
         
-        // Create basic info text
+        // Create basic info text (include timer placeholder for farms)
         let infoText = '';
         if (building.type === 'tower') {
             infoText = `Turm - Level ${building.level}\nReichweite: ${building.range}px\nSchaden: ${building.damage}\nHP: ${building.health}/${building.maxHealth}`;
         } else if (building.type === 'farm') {
-            infoText = `Feld - Level ${building.level}\n+${building.productionAmount} Batzen alle ${building.productionRate / 1000} Sek\nHP: ${building.health}/${building.maxHealth}`;
+            infoText = `Feld - Level ${building.level}\n+${building.productionAmount} Batzen alle ${building.productionRate / 1000} Sek\nHP: ${building.health}/${building.maxHealth}\n\nTimer: Lade...`;
         } else if (building.type === 'factory') {
             infoText = `Fabrik - Level ${building.level}\n(noch keine Funktion)\nHP: ${building.health}/${building.maxHealth}`;
         }
@@ -1126,10 +1126,7 @@ class TowerDefenseGame extends Phaser.Scene {
             this.createRotationButton(building);
         }
         
-        // Add timer for farms
-        if (building.type === 'farm') {
-            this.createFarmTimer(building);
-        }
+        // Timer for farms is now integrated into the main info text
     }
     
     clearBuildingInfo() {
@@ -1161,7 +1158,7 @@ class TowerDefenseGame extends Phaser.Scene {
     
     createUpgradeButton(building) {
         const maxLevel = this.buildingTypes[building.type].maxLevel;
-        const buttonY = this.infoPanel.y + this.infoPanel.height / 2 + 20;
+        const buttonY = this.infoPanel.y + this.infoPanel.height / 2 + 25; // Consistent spacing
         
         if (building.level < maxLevel) {
             const upgradeCost = this.getUpgradeCost(building.type, building.level);
@@ -1200,8 +1197,8 @@ class TowerDefenseGame extends Phaser.Scene {
     
     createRotationButton(building) {
         const buttonY = this.upgradeButton ? 
-            this.upgradeButton.y + 30 : 
-            this.infoPanel.y + this.infoPanel.height / 2 + 20;
+            this.upgradeButton.y + 35 : // Consistent spacing between buttons
+            this.infoPanel.y + this.infoPanel.height / 2 + 25;
         
         // Create rotation button
         this.rotateButton = this.add.rectangle(building.x + 50, buttonY, 120, 25, 0x4a4a4a, 0.9);

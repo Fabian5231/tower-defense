@@ -14,6 +14,11 @@ class TowerDefenseGame extends Phaser.Scene {
         this.mapWidth = 1200;
         this.mapHeight = 800;
         
+        this.gridSize = 30;
+        this.gridWidth = Math.floor(this.mapWidth / this.gridSize);
+        this.gridHeight = Math.floor(this.mapHeight / this.gridSize);
+        this.grid = Array(this.gridHeight).fill().map(() => Array(this.gridWidth).fill(false));
+        
         this.enemySpawnTimer = 0;
         this.enemySpawnDelay = 2000;
         
@@ -22,12 +27,60 @@ class TowerDefenseGame extends Phaser.Scene {
         this.selectedBuilding = null;
         this.infoPanel = null;
         this.buildingTypes = {
-            tower: { cost: 10, name: 'Turm', symbol: '🏯' },
-            farm: { cost: 10, name: 'Feld', symbol: '🌾' },
-            factory: { cost: 10, name: 'Fabrik', symbol: '🏭' }
+            tower: { cost: 10, name: 'Turm', symbol: '🏯', width: 1, height: 1 },
+            farm: { cost: 10, name: 'Feld', symbol: '🌾', width: 1, height: 2 },
+            factory: { cost: 10, name: 'Fabrik', symbol: '🏭', width: 2, height: 1 }
         };
     }
     
+    worldToGrid(x, y) {
+        return {
+            x: Math.floor(x / this.gridSize),
+            y: Math.floor(y / this.gridSize)
+        };
+    }
+    
+    gridToWorld(gridX, gridY) {
+        return {
+            x: (gridX + 0.5) * this.gridSize,
+            y: (gridY + 0.5) * this.gridSize
+        };
+    }
+    
+    isGridAreaFree(gridX, gridY, width, height) {
+        for (let y = gridY; y < gridY + height; y++) {
+            for (let x = gridX; x < gridX + width; x++) {
+                if (x < 0 || x >= this.gridWidth || y < 0 || y >= this.gridHeight) {
+                    return false;
+                }
+                if (this.grid[y][x]) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+    
+    occupyGridArea(gridX, gridY, width, height) {
+        for (let y = gridY; y < gridY + height; y++) {
+            for (let x = gridX; x < gridX + width; x++) {
+                if (x >= 0 && x < this.gridWidth && y >= 0 && y < this.gridHeight) {
+                    this.grid[y][x] = true;
+                }
+            }
+        }
+    }
+    
+    freeGridArea(gridX, gridY, width, height) {
+        for (let y = gridY; y < gridY + height; y++) {
+            for (let x = gridX; x < gridX + width; x++) {
+                if (x >= 0 && x < this.gridWidth && y >= 0 && y < this.gridHeight) {
+                    this.grid[y][x] = false;
+                }
+            }
+        }
+    }
+
     preload() {
         this.load.image('pixel', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==');
     }
@@ -51,23 +104,35 @@ class TowerDefenseGame extends Phaser.Scene {
     }
     
     createTownHall() {
+        const centerGridPos = this.worldToGrid(this.mapCenter.x, this.mapCenter.y);
+        const townHallGridX = centerGridPos.x - 1;
+        const townHallGridY = centerGridPos.y - 1;
+        const townHallWorldPos = this.gridToWorld(townHallGridX + 1, townHallGridY + 1);
+        
+        this.occupyGridArea(townHallGridX, townHallGridY, 3, 3);
+        
         this.townHall = {
-            x: this.mapCenter.x,
-            y: this.mapCenter.y,
+            x: townHallWorldPos.x,
+            y: townHallWorldPos.y,
             health: this.townHallHealth,
             maxHealth: this.townHallHealth,
-            radius: 40
+            radius: 45,
+            gridX: townHallGridX,
+            gridY: townHallGridY,
+            gridWidth: 3,
+            gridHeight: 3
         };
         
-        const townHallGraphic = this.add.circle(this.mapCenter.x, this.mapCenter.y, 40, 0x8b4513);
+        const townHallSize = 3 * this.gridSize;
+        const townHallGraphic = this.add.rectangle(townHallWorldPos.x, townHallWorldPos.y, townHallSize, townHallSize, 0x8b4513);
         townHallGraphic.setStrokeStyle(4, 0x654321);
         
-        this.add.text(this.mapCenter.x, this.mapCenter.y - 5, '👑', { 
+        this.add.text(townHallWorldPos.x, townHallWorldPos.y - 5, '👑', { 
             fontSize: '32px' 
         }).setOrigin(0.5);
         
-        this.townHallHealthBarBg = this.add.rectangle(this.mapCenter.x, this.mapCenter.y - 60, 82, 10, 0x666666);
-        this.townHallHealthBar = this.add.rectangle(this.mapCenter.x, this.mapCenter.y - 60, 80, 8, 0x00ff00);
+        this.townHallHealthBarBg = this.add.rectangle(townHallWorldPos.x, townHallWorldPos.y - townHallSize/2 - 15, townHallSize + 2, 10, 0x666666);
+        this.townHallHealthBar = this.add.rectangle(townHallWorldPos.x, townHallWorldPos.y - townHallSize/2 - 15, townHallSize, 8, 0x00ff00);
         
         this.townHallHealthBarBg.setVisible(false);
         this.townHallHealthBar.setVisible(false);
@@ -212,34 +277,41 @@ class TowerDefenseGame extends Phaser.Scene {
         }
         
         const building = this.buildingTypes[type];
+        const gridPos = this.worldToGrid(x, y);
+        const worldPos = this.gridToWorld(gridPos.x, gridPos.y);
+        
         const canAfford = this.currency >= building.cost;
-        const color = canAfford ? 0x00ff00 : 0xff0000;
+        const canPlace = this.isGridAreaFree(gridPos.x, gridPos.y, building.width, building.height);
+        const color = canAfford && canPlace ? 0x00ff00 : 0xff0000;
         const alpha = 0.5;
         
-        if (type === 'tower') {
-            this.hoverGraphic = this.add.circle(x, y, 15, color, alpha);
-            this.hoverGraphic.setStrokeStyle(2, color, 0.8);
-        } else if (type === 'farm') {
-            this.hoverGraphic = this.add.rectangle(x, y, 30, 30, color, alpha);
-            this.hoverGraphic.setStrokeStyle(2, color, 0.8);
-        } else if (type === 'factory') {
-            this.hoverGraphic = this.add.rectangle(x, y, 40, 25, color, alpha);
-            this.hoverGraphic.setStrokeStyle(2, color, 0.8);
-        }
+        const displayWidth = building.width * this.gridSize;
+        const displayHeight = building.height * this.gridSize;
+        
+        this.hoverGraphic = this.add.rectangle(worldPos.x, worldPos.y, displayWidth, displayHeight, color, alpha);
+        this.hoverGraphic.setStrokeStyle(2, color, 0.8);
     }
     
     tryPlaceBuilding(x, y, type) {
         const building = this.buildingTypes[type];
-        if (this.currency >= building.cost) {
+        const gridPos = this.worldToGrid(x, y);
+        const worldPos = this.gridToWorld(gridPos.x, gridPos.y);
+        
+        const canAfford = this.currency >= building.cost;
+        const canPlace = this.isGridAreaFree(gridPos.x, gridPos.y, building.width, building.height);
+        
+        if (canAfford && canPlace) {
             this.currency -= building.cost;
             this.currencyText.setText(`Batzen: ${this.currency}`);
             
+            this.occupyGridArea(gridPos.x, gridPos.y, building.width, building.height);
+            
             if (type === 'tower') {
-                this.placeTowerFree(x, y);
+                this.placeTowerFree(worldPos.x, worldPos.y, gridPos);
             } else if (type === 'farm') {
-                this.placeFarm(x, y);
+                this.placeFarm(worldPos.x, worldPos.y, gridPos);
             } else if (type === 'factory') {
-                this.placeFactory(x, y);
+                this.placeFactory(worldPos.x, worldPos.y, gridPos);
             }
             
             if (this.hoverGraphic) {
@@ -248,25 +320,32 @@ class TowerDefenseGame extends Phaser.Scene {
             }
             
             this.deselectBuilding();
-        } else {
+        } else if (!canAfford) {
             this.showInsufficientFundsMessage();
         }
     }
     
-    placeFarm(x, y) {
+    placeFarm(x, y, gridPos) {
+        const displayWidth = this.buildingTypes.farm.width * this.gridSize;
+        const displayHeight = this.buildingTypes.farm.height * this.gridSize;
+        
         const farm = {
             x: x,
             y: y,
+            gridX: gridPos.x,
+            gridY: gridPos.y,
+            gridWidth: this.buildingTypes.farm.width,
+            gridHeight: this.buildingTypes.farm.height,
             health: 100,
             maxHealth: 100,
             type: 'farm',
             lastProduction: this.time.now,
             productionRate: 30000,
             productionAmount: 5,
-            graphic: this.add.rectangle(x, y, 30, 30, 0x8b4513),
+            graphic: this.add.rectangle(x, y, displayWidth, displayHeight, 0x8b4513),
             symbol: this.add.text(x, y, '🌾', { fontSize: '20px' }).setOrigin(0.5),
-            healthBarBg: this.add.rectangle(x, y - 25, 32, 6, 0x666666),
-            healthBar: this.add.rectangle(x, y - 25, 30, 4, 0x00ff00)
+            healthBarBg: this.add.rectangle(x, y - displayHeight/2 - 10, displayWidth + 2, 6, 0x666666),
+            healthBar: this.add.rectangle(x, y - displayHeight/2 - 10, displayWidth, 4, 0x00ff00)
         };
         
         farm.graphic.setStrokeStyle(2, 0x654321);
@@ -276,17 +355,24 @@ class TowerDefenseGame extends Phaser.Scene {
         this.buildings.push(farm);
     }
     
-    placeFactory(x, y) {
+    placeFactory(x, y, gridPos) {
+        const displayWidth = this.buildingTypes.factory.width * this.gridSize;
+        const displayHeight = this.buildingTypes.factory.height * this.gridSize;
+        
         const factory = {
             x: x,
             y: y,
+            gridX: gridPos.x,
+            gridY: gridPos.y,
+            gridWidth: this.buildingTypes.factory.width,
+            gridHeight: this.buildingTypes.factory.height,
             health: 150,
             maxHealth: 150,
             type: 'factory',
-            graphic: this.add.rectangle(x, y, 40, 25, 0x666666),
+            graphic: this.add.rectangle(x, y, displayWidth, displayHeight, 0x666666),
             symbol: this.add.text(x, y, '🏭', { fontSize: '18px' }).setOrigin(0.5),
-            healthBarBg: this.add.rectangle(x, y - 20, 42, 6, 0x666666),
-            healthBar: this.add.rectangle(x, y - 20, 40, 4, 0x00ff00)
+            healthBarBg: this.add.rectangle(x, y - displayHeight/2 - 10, displayWidth + 2, 6, 0x666666),
+            healthBar: this.add.rectangle(x, y - displayHeight/2 - 10, displayWidth, 4, 0x00ff00)
         };
         
         factory.graphic.setStrokeStyle(2, 0x444444);
@@ -297,10 +383,16 @@ class TowerDefenseGame extends Phaser.Scene {
     }
     
     
-    placeTowerFree(x, y) {
+    placeTowerFree(x, y, gridPos) {
+        const displaySize = this.gridSize;
+        
         const tower = {
             x: x,
             y: y,
+            gridX: gridPos.x,
+            gridY: gridPos.y,
+            gridWidth: this.buildingTypes.tower.width,
+            gridHeight: this.buildingTypes.tower.height,
             health: 75,
             maxHealth: 75,
             range: 60,
@@ -308,10 +400,12 @@ class TowerDefenseGame extends Phaser.Scene {
             fireRate: 500,
             lastFired: 0,
             type: 'tower',
-            graphic: this.add.circle(x, y, 15, 0x00ff00),
-            healthBarBg: this.add.rectangle(x, y - 25, 32, 6, 0x666666),
-            healthBar: this.add.rectangle(x, y - 25, 30, 4, 0x00ff00)
+            graphic: this.add.rectangle(x, y, displaySize, displaySize, 0x00ff00),
+            healthBarBg: this.add.rectangle(x, y - displaySize/2 - 10, displaySize + 2, 6, 0x666666),
+            healthBar: this.add.rectangle(x, y - displaySize/2 - 10, displaySize, 4, 0x00ff00)
         };
+        
+        tower.graphic.setStrokeStyle(2, 0x00aa00);
         
         const rangeCircle = this.add.circle(x, y, tower.range, 0x00ff00, 0.1);
         rangeCircle.setStrokeStyle(2, 0x00ff00, 0.3);
@@ -748,6 +842,10 @@ class TowerDefenseGame extends Phaser.Scene {
                 if (building.symbol) building.symbol.destroy();
                 building.healthBarBg.destroy();
                 building.healthBar.destroy();
+                
+                if (building.gridX !== undefined && building.gridY !== undefined) {
+                    this.freeGridArea(building.gridX, building.gridY, building.gridWidth, building.gridHeight);
+                }
                 
                 if (building.type === 'tower') {
                     this.towers = this.towers.filter(tower => tower !== building);

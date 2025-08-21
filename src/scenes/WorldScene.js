@@ -33,10 +33,10 @@ export default class WorldScene extends Phaser.Scene {
         this.speedLevels = [0.5, 1.0, 2.0, 3.0];
         this.currentSpeedIndex = 1;
         
-        // Map properties (adjusted for sidebar)
-        this.mapCenter = { x: 490, y: 360 }; // Adjusted for smaller world area
-        this.mapWidth = 980; // 1200 - 220 sidebar
-        this.mapHeight = 720;
+        // Map properties (expanded playfield)
+        this.mapWidth = 1200; // Erweitert für größeres Spielfeld
+        this.mapHeight = 900; // Erweitert nach oben/unten
+        this.mapCenter = { x: 600, y: 450 }; // Zentriert im erweiterten Feld
         this.gridSize = 30;
         
         // Building state
@@ -69,6 +69,13 @@ export default class WorldScene extends Phaser.Scene {
         // Set viewport for world area (left side, excluding sidebar)
         this.cameras.main.setViewport(0, 0, w - SIDEBAR_W, h);
         
+        // Setup camera bounds for the expanded world
+        this.cameras.main.setBounds(-200, -200, this.mapWidth + 400, this.mapHeight + 400);
+        this.cameras.main.setZoom(0.8); // Zoom out um mehr zu sehen
+        
+        // Create textured green background
+        this.createWorldBackground();
+        
         // Initialize managers
         this.gridManager = new GridManager(this.mapWidth, this.mapHeight, this.gridSize);
         this.waveManager = new WaveManager();
@@ -95,6 +102,55 @@ export default class WorldScene extends Phaser.Scene {
         // Launch and setup UI scene
         this.scene.launch('ui');
         this.scene.bringToTop('ui');
+    }
+    
+    createWorldBackground() {
+        // Create textured green background with grass pattern
+        const graphics = this.add.graphics();
+        
+        // Base green background
+        graphics.fillStyle(0x2d5c2b, 1.0); // Dunkelgrün
+        graphics.fillRect(-200, -200, this.mapWidth + 400, this.mapHeight + 400);
+        
+        // Add lighter green texture patches
+        const patchSize = 60;
+        const patches = 200; // Anzahl der Textur-Patches
+        
+        for (let i = 0; i < patches; i++) {
+            const x = Math.random() * (this.mapWidth + 400) - 200;
+            const y = Math.random() * (this.mapHeight + 400) - 200;
+            const size = patchSize + Math.random() * 30 - 15; // Variation in size
+            
+            // Verschiedene Grüntöne für Variation
+            const greenShades = [0x3a6b38, 0x2f5f2d, 0x426c40, 0x377d35];
+            const color = greenShades[Math.floor(Math.random() * greenShades.length)];
+            
+            graphics.fillStyle(color, 0.6);
+            graphics.fillCircle(x, y, size);
+        }
+        
+        // Add subtle dirt patches (braun)
+        for (let i = 0; i < 50; i++) {
+            const x = Math.random() * (this.mapWidth + 400) - 200;
+            const y = Math.random() * (this.mapHeight + 400) - 200;
+            const size = 20 + Math.random() * 15;
+            
+            graphics.fillStyle(0x6b4423, 0.4); // Braun für Erdflecken
+            graphics.fillCircle(x, y, size);
+        }
+        
+        // Add small grass detail dots
+        for (let i = 0; i < 300; i++) {
+            const x = Math.random() * (this.mapWidth + 400) - 200;
+            const y = Math.random() * (this.mapHeight + 400) - 200;
+            const size = 2 + Math.random() * 3;
+            
+            graphics.fillStyle(0x4a7c48, 0.8); // Helleres Grün für Grasdetails
+            graphics.fillCircle(x, y, size);
+        }
+        
+        // Set depth to be behind everything else
+        graphics.setDepth(-1000);
     }
     
     setupUIEventHandlers() {
@@ -150,6 +206,18 @@ export default class WorldScene extends Phaser.Scene {
         
         this.input.keyboard.on('keydown-FOUR', () => {
             this.setSpeed(3.0);
+        });
+        
+        // Camera controls
+        this.cursors = this.input.keyboard.createCursorKeys();
+        this.wasdKeys = this.input.keyboard.addKeys('W,S,A,D');
+        
+        // Mouse wheel zoom
+        this.input.on('wheel', (pointer, gameObjects, deltaX, deltaY, deltaZ) => {
+            const camera = this.cameras.main;
+            const zoomFactor = deltaY > 0 ? 0.9 : 1.1;
+            const newZoom = Phaser.Math.Clamp(camera.zoom * zoomFactor, 0.5, 1.5);
+            camera.setZoom(newZoom);
         });
     }
     
@@ -237,17 +305,25 @@ export default class WorldScene extends Phaser.Scene {
     }
     
     handleClick(pointer) {
-        if (pointer.x > this.mapWidth) return; // Ignore clicks in sidebar area
+        // Convert screen coordinates to world coordinates
+        const worldX = this.cameras.main.scrollX + pointer.x;
+        const worldY = this.cameras.main.scrollY + pointer.y;
+        
+        if (pointer.x > this.scale.width - SIDEBAR_W) return; // Ignore clicks in sidebar area
         
         if (this.selectedBuildingType && pointer.y > 100) {
-            this.tryPlaceBuilding(pointer.x, pointer.y, this.selectedBuildingType);
+            this.tryPlaceBuilding(worldX, worldY, this.selectedBuildingType);
         } else if (!this.selectedBuildingType && pointer.y > 100) {
-            this.selectExistingBuilding(pointer.x, pointer.y);
+            this.selectExistingBuilding(worldX, worldY);
         }
     }
     
     handleMouseMove(pointer) {
-        if (!this.selectedBuildingType || pointer.x > this.mapWidth) {
+        // Convert screen coordinates to world coordinates
+        const worldX = this.cameras.main.scrollX + pointer.x;
+        const worldY = this.cameras.main.scrollY + pointer.y;
+        
+        if (!this.selectedBuildingType || pointer.x > this.scale.width - SIDEBAR_W) {
             // Clear building preview when outside game area
             if (this.hoverGraphic) {
                 this.hoverGraphic.setVisible(false);
@@ -256,7 +332,7 @@ export default class WorldScene extends Phaser.Scene {
         }
         
         if (pointer.y > 100) {
-            this.showBuildingPreview(pointer.x, pointer.y, this.selectedBuildingType);
+            this.showBuildingPreview(worldX, worldY, this.selectedBuildingType);
         } else {
             // Clear preview when in UI area
             if (this.hoverGraphic) {
@@ -697,7 +773,30 @@ export default class WorldScene extends Phaser.Scene {
         return { x, y };
     }
     
+    updateCameraMovement(delta) {
+        const camera = this.cameras.main;
+        const speed = 300 / camera.zoom; // Geschwindigkeit abhängig vom Zoom
+        const moveDistance = speed * (delta / 1000);
+        
+        // WASD and Arrow key movement
+        if (this.cursors.left.isDown || this.wasdKeys.A.isDown) {
+            camera.scrollX -= moveDistance;
+        }
+        if (this.cursors.right.isDown || this.wasdKeys.D.isDown) {
+            camera.scrollX += moveDistance;
+        }
+        if (this.cursors.up.isDown || this.wasdKeys.W.isDown) {
+            camera.scrollY -= moveDistance;
+        }
+        if (this.cursors.down.isDown || this.wasdKeys.S.isDown) {
+            camera.scrollY += moveDistance;
+        }
+    }
+    
     update(time, delta) {
+        // Camera movement (works even when paused)
+        this.updateCameraMovement(delta);
+        
         if (this.isPaused) return;
         
         const scaledDelta = delta * this.gameSpeed;

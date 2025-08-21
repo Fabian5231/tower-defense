@@ -179,10 +179,10 @@ export default class WorldScene extends Phaser.Scene {
         const cam = this.worldCam;
         const halfW = cam.width * 0.5 / cam.zoom;
         const halfH = cam.height * 0.5 / cam.zoom;
-        const minX = Math.max(halfW, halfW);
-        const maxX = Math.min(this.worldWidth - halfW, this.worldWidth - halfW);
-        const minY = Math.max(halfH, halfH);
-        const maxY = Math.min(this.worldHeight - halfH, this.worldHeight - halfH);
+        const minX = halfW;
+        const maxX = this.worldWidth - halfW;
+        const minY = halfH;
+        const maxY = this.worldHeight - halfH;
         
         cam.centerOn(
             Phaser.Math.Clamp(cam.midPoint.x, minX, maxX),

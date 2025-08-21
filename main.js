@@ -4,8 +4,8 @@ import UISceneRight from './src/scenes/UISceneRight.js';
 
 const config = {
     type: Phaser.AUTO,
-    width: 1200,
-    height: 720,
+    width: 1400,
+    height: 800,
     parent: 'game-container',
     backgroundColor: '#1e1e1e',
     scene: [WorldScene, UISceneLeft, UISceneRight],

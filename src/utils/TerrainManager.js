@@ -320,6 +320,11 @@ export default class TerrainManager {
         return terrain === 'mountain';
     }
     
+    isTerrainType(gridX, gridY, terrainType) {
+        const terrain = this.getTerrainAt(gridX, gridY);
+        return terrain === terrainType;
+    }
+    
     destroy() {
         this.terrainGraphics.forEach(graphic => graphic.destroy());
         this.terrainGraphics = [];

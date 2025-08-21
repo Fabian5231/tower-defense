@@ -9,7 +9,7 @@ export default class InfoPanel {
         this.uiLayer.setDepth(1000);
     }
     
-    show(building, onUpgrade, onRotate) {
+    show(building, onUpgrade, onRotate, onDestroy) {
         this.clear();
         
         this.currentBuilding = building;
@@ -30,10 +30,13 @@ export default class InfoPanel {
         // Create upgrade button
         this.createUpgradeButton(building, onUpgrade);
         
-        // Create rotation button for non-combat buildings (farms, factories)
-        if (building.type !== 'tower' && building.type !== 'werfer') {
+        // Create rotation button for non-combat buildings (farms, factories) - mines are 1x1 so no rotation needed
+        if (building.type === 'farm' || building.type === 'factory') {
             this.createRotationButton(building, onRotate);
         }
+        
+        // Create destroy button
+        this.createDestroyButton(building, onDestroy);
     }
     
     generateInfoText(building) {
@@ -52,9 +55,17 @@ export default class InfoPanel {
         } else if (building.type === 'factory') {
             const supplierInfo = building.getSupplierInfo();
             if (supplierInfo.hasSuppliers) {
-                infoText = `Fabrik - Level ${building.level}\n+${supplierInfo.productionAmount} Batzen alle ${building.productionRate / 1000} Sek\nBeliefert durch: ${supplierInfo.supplierCount} ${supplierInfo.supplierCount === 1 ? 'Feld' : 'Felder'}\nHP: ${building.health}/${building.maxHealth}`;
+                infoText = `Fabrik - Level ${building.level}\n+${supplierInfo.productionAmount} Batzen alle ${building.productionRate / 1000} Sek\nBeliefert durch: ${supplierInfo.supplierCount} Lieferant(en)\nHP: ${building.health}/${building.maxHealth}`;
             } else {
                 infoText = `Fabrik - Level ${building.level}\nKeine Belieferung\nKeine Produktion\nHP: ${building.health}/${building.maxHealth}`;
+            }
+        } else if (building.type === 'mine') {
+            if (building.suppliesFactory) {
+                infoText = `Mine - Level ${building.level}\nBeliefert Fabrik\nKeine direkte Produktion\nHP: ${building.health}/${building.maxHealth}`;
+            } else if (building.isProducing) {
+                infoText = `Mine - Level ${building.level}\n+${building.productionAmount} Batzen alle ${building.productionRate / 1000} Sek\nHP: ${building.health}/${building.maxHealth}\n\nTimer: Lade...`;
+            } else {
+                infoText = `Mine - Level ${building.level}\nKein Berg in der Nähe!\nKeine Produktion\nHP: ${building.health}/${building.maxHealth}`;
             }
         }
         
@@ -64,10 +75,11 @@ export default class InfoPanel {
     createUpgradeButton(building, onUpgrade) {
         const buttonY = this.elements.infoPanel.y + this.elements.infoPanel.height / 2 + 25;
         const buildingTypes = {
-            tower: { maxLevel: 3 },
-            werfer: { maxLevel: 3 },
-            farm: { maxLevel: 3 },
-            factory: { maxLevel: 3 }
+            tower: { maxLevel: 5 },
+            werfer: { maxLevel: 5 },
+            farm: { maxLevel: 5 },
+            factory: { maxLevel: 5 },
+            mine: { maxLevel: 5 }
         };
         const maxLevel = buildingTypes[building.type].maxLevel;
         
@@ -144,16 +156,61 @@ export default class InfoPanel {
         });
     }
     
+    createDestroyButton(building, onDestroy) {
+        let buttonY;
+        if (this.elements.rotateButton) {
+            buttonY = this.elements.rotateButton.y + 35;
+        } else if (this.elements.upgradeButton) {
+            buttonY = this.elements.upgradeButton.y + 35;
+        } else {
+            buttonY = this.elements.infoPanel.y + this.elements.infoPanel.height / 2 + 25;
+        }
+        
+        // Create destroy button
+        this.elements.destroyButton = this.scene.add.rectangle(building.x + 50, buttonY, 120, 25, 0xaa0000, 0.9);
+        this.elements.destroyButton.setStrokeStyle(1, 0x660000);
+        this.elements.destroyButton.setInteractive();
+        this.elements.destroyButton.setOrigin(0, 0.5);
+        
+        this.elements.destroyButtonText = this.scene.add.text(building.x + 110, buttonY, '💥 Zerstören', {
+            fontSize: '10px',
+            fill: '#fff'
+        }).setOrigin(0.5, 0.5);
+
+        // ins UI-Layer packen
+        this.uiLayer.add([this.elements.destroyButton, this.elements.destroyButtonText]);
+        
+        // Button interactions
+        this.elements.destroyButton.on('pointerdown', () => {
+            onDestroy(building);
+        });
+        
+        this.elements.destroyButton.on('pointerover', () => {
+            this.elements.destroyButton.setFillStyle(0xdd0000);
+        });
+        
+        this.elements.destroyButton.on('pointerout', () => {
+            this.elements.destroyButton.setFillStyle(0xaa0000);
+        });
+    }
+    
     updateFarmTimer(currentTime, gameSpeed) {
-        if (!this.currentBuilding || this.currentBuilding.type !== 'farm' || this.currentBuilding.suppliesFactory) {
+        if (!this.currentBuilding || (this.currentBuilding.type !== 'farm' && this.currentBuilding.type !== 'mine')) {
             return;
         }
         
         const timerInfo = this.currentBuilding.getTimerInfo(currentTime, gameSpeed);
         if (timerInfo && this.elements.infoPanel) {
-            const baseText = `Feld - Level ${this.currentBuilding.level}\n+${this.currentBuilding.productionAmount} Batzen alle ${this.currentBuilding.productionRate / 1000} Sek\nHP: ${this.currentBuilding.health}/${this.currentBuilding.maxHealth}`;
-            const fullText = `${baseText}\n\n${timerInfo}`;
+            let baseText;
+            if (this.currentBuilding.type === 'farm') {
+                if (this.currentBuilding.suppliesFactory) return;
+                baseText = `Feld - Level ${this.currentBuilding.level}\n+${this.currentBuilding.productionAmount} Batzen alle ${this.currentBuilding.productionRate / 1000} Sek\nHP: ${this.currentBuilding.health}/${this.currentBuilding.maxHealth}`;
+            } else if (this.currentBuilding.type === 'mine') {
+                if (this.currentBuilding.suppliesFactory || !this.currentBuilding.isProducing) return;
+                baseText = `Mine - Level ${this.currentBuilding.level}\n+${this.currentBuilding.productionAmount} Batzen alle ${this.currentBuilding.productionRate / 1000} Sek\nHP: ${this.currentBuilding.health}/${this.currentBuilding.maxHealth}`;
+            }
             
+            const fullText = `${baseText}\n\n${timerInfo}`;
             this.elements.infoPanel.setText(fullText);
         }
     }
@@ -163,7 +220,8 @@ export default class InfoPanel {
             tower: 10,
             werfer: 50,
             farm: 10,
-            factory: 10
+            factory: 10,
+            mine: 30
         };
         const baseCost = baseCosts[buildingType];
         return Math.floor(baseCost * (currentLevel + 1) * 1.5);

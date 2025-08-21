@@ -17,7 +17,9 @@ export default class Werfer {
         this.levelStats = {
             1: { damage: 60, range: 200, health: 100 }, // MASSIVE Range & hoher Schaden
             2: { damage: 90, range: 250, health: 140 },
-            3: { damage: 120, range: 300, health: 180 }
+            3: { damage: 120, range: 300, health: 180 },
+            4: { damage: 160, range: 350, health: 230 },
+            5: { damage: 200, range: 400, health: 280 }
         };
 
         // Langsamere Fire-Rate als Tower (da stärker)
@@ -146,7 +148,7 @@ export default class Werfer {
     }
 
     upgrade() {
-        if (this.level >= 3) return false; // Max level reached
+        if (this.level >= 5) return false; // Max level reached
 
         this.level++;
         this.applyLevelStats(); // Neue Stats anwenden

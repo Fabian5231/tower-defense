@@ -16,8 +16,10 @@ export default class Tower {
         // Level-basierten Stats definieren
         this.levelStats = {
             1: { damage: 25, range: 80, health: 75 },
-            2: { damage: 40, range: 100, health: 199 },
-            3: { damage: 55, range: 100, health: 125 }
+            2: { damage: 40, range: 100, health: 100 },
+            3: { damage: 55, range: 120, health: 125 },
+            4: { damage: 75, range: 140, health: 150 },
+            5: { damage: 100, range: 160, health: 200 }
         };
 
         // Fire-Rate bleibt gleich für alle Level
@@ -140,7 +142,7 @@ export default class Tower {
     }
 
     upgrade() {
-        if (this.level >= 3) return false; // Max level reached
+        if (this.level >= 5) return false; // Max level reached
 
         this.level++;
         this.applyLevelStats(); // Neue Stats anwenden

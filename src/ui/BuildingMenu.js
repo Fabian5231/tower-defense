@@ -24,7 +24,7 @@ export default class BuildingMenu {
                 symbol: "🏯",
                 width: 1,
                 height: 1,
-                maxLevel: 3,
+                maxLevel: 5,
                 range: 80 // Direkte Range-Angabe (Level 1)
             },
             werfer: {
@@ -33,7 +33,7 @@ export default class BuildingMenu {
                 symbol: "💥",
                 width: 1,
                 height: 1,
-                maxLevel: 3,
+                maxLevel: 5,
                 range: 200 // MASSIVE Range!
             },
             farm: {
@@ -42,7 +42,7 @@ export default class BuildingMenu {
                 symbol: "🌾",
                 width: 1,
                 height: 2,
-                maxLevel: 3
+                maxLevel: 5
             },
             factory: {
                 cost: 10,
@@ -50,7 +50,15 @@ export default class BuildingMenu {
                 symbol: "🏭",
                 width: 2,
                 height: 1,
-                maxLevel: 3
+                maxLevel: 5
+            },
+            mine: {
+                cost: 30,
+                name: "Mine",
+                symbol: "⛏️",
+                width: 1,
+                height: 1,
+                maxLevel: 5
             }
         };
         

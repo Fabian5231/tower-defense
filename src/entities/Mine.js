@@ -1,4 +1,4 @@
-export default class Farm {
+export default class Mine {
     constructor(scene, x, y, gridPos, rotation = 0) {
         this.scene = scene;
         this.x = x;
@@ -7,59 +7,80 @@ export default class Farm {
         this.gridY = gridPos.y;
         this.rotation = rotation;
         
-        // Calculate dimensions based on rotation
-        const dimensions = this.getRotatedDimensions(rotation);
-        this.gridWidth = dimensions.width;
-        this.gridHeight = dimensions.height;
+        // Mine is always 1x1
+        this.gridWidth = 1;
+        this.gridHeight = 1;
         
-        // Farm stats
+        // Mine stats
         this.level = 1;
-        this.health = 100;
-        this.maxHealth = 100;
-        this.type = 'farm';
+        this.health = 120;
+        this.maxHealth = 120;
+        this.type = 'mine';
         this.lastProduction = this.scene.time.now;
-        this.productionRate = 30000; // 30 seconds
-        this.productionAmount = 5;
+        this.productionRate = 60000; // 60 seconds (1 minute)
+        this.productionAmount = 50; // 50 Batzen per minute
         this.suppliesFactory = false;
+        this.isProducing = false; // Wird durch Berg-Check gesetzt
         
         // Flags
         this.toRemove = false;
         
+        // Check if mine is adjacent to mountain
+        this.checkMountainProximity();
+        
         this.createGraphics();
     }
     
-    getRotatedDimensions(rotation) {
-        // Farm is 1x2 by default
-        if (rotation === 90 || rotation === 270) {
-            return { width: 2, height: 1 };
+    checkMountainProximity() {
+        const terrainManager = this.scene.terrainManager;
+        if (!terrainManager) {
+            this.isProducing = false;
+            return;
         }
-        return { width: 1, height: 2 };
+        
+        // Check all 8 adjacent cells for mountains
+        const directions = [
+            {x: -1, y: -1}, {x: 0, y: -1}, {x: 1, y: -1},
+            {x: -1, y: 0},                 {x: 1, y: 0},
+            {x: -1, y: 1},  {x: 0, y: 1},  {x: 1, y: 1}
+        ];
+        
+        for (let dir of directions) {
+            const checkX = this.gridX + dir.x;
+            const checkY = this.gridY + dir.y;
+            
+            if (terrainManager.isTerrainType(checkX, checkY, 'mountain')) {
+                this.isProducing = true;
+                return;
+            }
+        }
+        
+        this.isProducing = false;
     }
     
     createGraphics() {
         const gridSize = 30;
-        const displayWidth = this.gridWidth * gridSize;
-        const displayHeight = this.gridHeight * gridSize;
+        const displaySize = gridSize;
         
-        // Main farm graphic
-        this.graphic = this.scene.add.rectangle(this.x, this.y, displayWidth, displayHeight, 0x8b4513);
-        this.graphic.setStrokeStyle(2, 0x654321);
+        // Main mine graphic (dark gray/brown)
+        this.graphic = this.scene.add.rectangle(this.x, this.y, displaySize, displaySize, 0x4a4a4a);
+        this.graphic.setStrokeStyle(2, 0x2a2a2a);
         
-        // Farm symbol
-        this.symbol = this.scene.add.text(this.x, this.y, '🌾', { fontSize: '20px' }).setOrigin(0.5);
+        // Mine symbol
+        this.symbol = this.scene.add.text(this.x, this.y, '⛏️', { fontSize: '16px' }).setOrigin(0.5);
         
         // Health bars
         this.healthBarBg = this.scene.add.rectangle(
             this.x, 
-            this.y - displayHeight/2 - 10, 
-            displayWidth + 2, 
+            this.y - displaySize/2 - 10, 
+            displaySize + 2, 
             6, 
             0x666666
         );
         this.healthBar = this.scene.add.rectangle(
             this.x, 
-            this.y - displayHeight/2 - 10, 
-            displayWidth, 
+            this.y - displaySize/2 - 10, 
+            displaySize, 
             4, 
             0x00ff00
         );
@@ -70,17 +91,18 @@ export default class Farm {
     }
     
     update(time, gameSpeed) {
-        if (this.suppliesFactory) return null; // Don't produce gold if supplying factory
+        // Don't produce if not adjacent to mountain or supplying factory
+        if (!this.isProducing || this.suppliesFactory) return null;
         
         const adjustedProductionRate = this.productionRate / gameSpeed;
         
         if (time - this.lastProduction > adjustedProductionRate) {
             this.lastProduction = time;
             
-            // Create gold animation
+            // Create gold animation with mine-specific color (bronze/yellow)
             const coinText = this.scene.add.text(this.x, this.y - 40, `+${this.productionAmount}`, {
                 fontSize: '14px',
-                fill: '#ffd700',
+                fill: '#DAA520', // Goldenrod for mine production
                 fontStyle: 'bold'
             }).setOrigin(0.5);
             
@@ -98,49 +120,15 @@ export default class Farm {
         return null;
     }
     
-    rotate() {
-        const newRotation = (this.rotation + 90) % 360;
-        const newDimensions = this.getRotatedDimensions(newRotation);
-        
-        return {
-            newRotation,
-            newDimensions,
-            currentDimensions: { width: this.gridWidth, height: this.gridHeight }
-        };
-    }
-    
-    applyRotation(newRotation, newDimensions, newWorldPos) {
-        this.rotation = newRotation;
-        this.gridWidth = newDimensions.width;
-        this.gridHeight = newDimensions.height;
-        this.x = newWorldPos.x;
-        this.y = newWorldPos.y;
-        
-        // Update graphics
-        const gridSize = 30;
-        const displayWidth = newDimensions.width * gridSize;
-        const displayHeight = newDimensions.height * gridSize;
-        
-        this.graphic.setSize(displayWidth, displayHeight);
-        this.graphic.setPosition(newWorldPos.x, newWorldPos.y);
-        this.symbol.setPosition(newWorldPos.x, newWorldPos.y);
-        
-        this.healthBarBg.setSize(displayWidth + 2, 6);
-        this.healthBarBg.setPosition(newWorldPos.x, newWorldPos.y - displayHeight / 2 - 10);
-        
-        this.healthBar.setSize(displayWidth, 4);
-        this.healthBar.setPosition(newWorldPos.x, newWorldPos.y - displayHeight / 2 - 10);
-    }
-    
     upgrade() {
         if (this.level >= 5) return false;
         
         this.level++;
         
         // Apply level-based improvements
-        this.productionAmount = 5 + ((this.level - 1) * 3); // Level 1: 5, Level 2: 8, Level 3: 11, Level 4: 14, Level 5: 17
-        this.productionRate = Math.max(10000, 30000 - ((this.level - 1) * 5000)); // Level 1: 30s, Level 2: 25s, Level 3: 20s, Level 4: 15s, Level 5: 10s
-        this.maxHealth = 100 + ((this.level - 1) * 25); // Level 1: 100, Level 2: 125, Level 3: 150, Level 4: 175, Level 5: 200
+        this.productionAmount = 50 + ((this.level - 1) * 20); // Level 1: 50, Level 2: 70, Level 3: 90, Level 4: 110, Level 5: 130
+        this.productionRate = Math.max(30000, 60000 - ((this.level - 1) * 7500)); // Level 1: 60s, Level 2: 52.5s, Level 3: 45s, Level 4: 37.5s, Level 5: 30s
+        this.maxHealth = 120 + ((this.level - 1) * 30); // Level 1: 120, Level 2: 150, Level 3: 180, Level 4: 210, Level 5: 240
         this.health = this.maxHealth; // Heal to full on upgrade
         
         return true;
@@ -164,7 +152,8 @@ export default class Farm {
     }
     
     getTimerInfo(currentTime, gameSpeed) {
-        if (this.suppliesFactory) return null;
+        if (!this.isProducing) return 'Kein Berg in der Nähe!';
+        if (this.suppliesFactory) return 'Versorgt Fabrik';
         
         const timeSinceLastProduction = currentTime - this.lastProduction;
         const adjustedProductionRate = this.productionRate / gameSpeed;

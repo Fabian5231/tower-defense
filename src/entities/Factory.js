@@ -101,12 +101,17 @@ export default class Factory {
     updateSupplyChain(suppliers) {
         this.suppliedBy = suppliers;
         
-        // Calculate production based on suppliers
+        // Calculate production based on suppliers with level-based multiplier
         let totalProduction = 0;
-        suppliers.forEach(farm => {
-            if (farm.type === 'farm') {
-                farm.suppliesFactory = true;
-                totalProduction += farm.productionAmount * 1.5; // 1.5x multiplier
+        const levelMultiplier = 1.2 + (this.level * 0.3); // Level 1: 1.5x, Level 2: 1.8x, Level 3: 2.1x, Level 4: 2.4x, Level 5: 2.7x
+        
+        suppliers.forEach(supplier => {
+            if (supplier.type === 'farm') {
+                supplier.suppliesFactory = true;
+                totalProduction += supplier.productionAmount * levelMultiplier;
+            } else if (supplier.type === 'mine') {
+                supplier.suppliesFactory = true;
+                totalProduction += supplier.productionAmount * levelMultiplier;
             }
         });
         
@@ -153,12 +158,12 @@ export default class Factory {
     }
     
     upgrade() {
-        if (this.level >= 3) return false;
+        if (this.level >= 5) return false;
         
         this.level++;
         
-        // Apply level-based improvements
-        this.maxHealth = 150 + ((this.level - 1) * 50); // Level 1: 150, Level 2: 200, Level 3: 250
+        // Apply level-based improvements - höhere Level geben noch höheren Multiplikator
+        this.maxHealth = 150 + ((this.level - 1) * 40); // Level 1: 150, Level 2: 190, Level 3: 230, Level 4: 270, Level 5: 310
         this.health = this.maxHealth; // Heal to full on upgrade
         
         return true;

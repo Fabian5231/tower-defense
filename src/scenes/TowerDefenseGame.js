@@ -3,6 +3,7 @@ import Tower from '../entities/Tower.js';
 import Werfer from '../entities/Werfer.js';
 import Farm from '../entities/Farm.js';
 import Factory from '../entities/Factory.js';
+import Mine from '../entities/Mine.js';
 import HUD from '../ui/HUD.js';
 import BuildingMenu from '../ui/BuildingMenu.js';
 import InfoPanel from '../ui/InfoPanel.js';
@@ -316,6 +317,9 @@ export default class TowerDefenseGame extends Phaser.Scene {
             case 'factory':
                 newBuilding = new Factory(this, x, y, gridPos, rotation);
                 break;
+            case 'mine':
+                newBuilding = new Mine(this, x, y, gridPos, rotation);
+                break;
         }
         
         if (newBuilding) {
@@ -348,7 +352,8 @@ export default class TowerDefenseGame extends Phaser.Scene {
             this.infoPanel.show(
                 clickedBuilding, 
                 (building) => this.upgradeBuilding(building),
-                (building) => this.rotateBuilding(building)
+                (building) => this.rotateBuilding(building),
+                (building) => this.destroyBuilding(building)
             );
             
             if (clickedBuilding.type === 'tower' || clickedBuilding.type === 'werfer') {
@@ -419,6 +424,50 @@ export default class TowerDefenseGame extends Phaser.Scene {
     getUpgradeCost(buildingType, currentLevel) {
         const baseCost = this.buildingMenu.getBuildingType(buildingType).cost;
         return Math.floor(baseCost * (currentLevel + 1) * 1.5);
+    }
+    
+    destroyBuilding(building) {
+        // Refund 50% of the building's total investment
+        const buildingCost = this.buildingMenu.getBuildingType(building.type).cost;
+        let totalInvestment = buildingCost;
+        
+        // Add upgrade costs
+        for (let i = 1; i < building.level; i++) {
+            totalInvestment += this.getUpgradeCost(building.type, i);
+        }
+        
+        const refund = Math.floor(totalInvestment * 0.5);
+        this.currency += refund;
+        this.hud.updateCurrency(this.currency);
+        
+        // Show refund animation
+        const refundText = this.add.text(building.x, building.y - 40, `+${refund}B`, {
+            fontSize: '14px',
+            fill: '#ffff00',
+            fontStyle: 'bold'
+        }).setOrigin(0.5);
+        
+        this.tweens.add({
+            targets: refundText,
+            y: building.y - 60,
+            alpha: 0,
+            duration: 1500,
+            onComplete: () => refundText.destroy()
+        });
+        
+        // Free grid space
+        this.gridManager.freeGridArea(building.gridX, building.gridY, building.gridWidth, building.gridHeight);
+        
+        // Remove from towers array if it's a combat building
+        if (building.type === 'tower' || building.type === 'werfer') {
+            this.towers = this.towers.filter(tower => tower !== building);
+        }
+        
+        // Mark building for removal
+        building.toRemove = true;
+        
+        // Close info panel
+        this.deselectCurrentBuilding();
     }
     
     toggleGrid(showGrid) {
@@ -526,6 +575,8 @@ export default class TowerDefenseGame extends Phaser.Scene {
         this.buildings.forEach(building => {
             if (building.type === 'farm') {
                 building.suppliesFactory = false;
+            } else if (building.type === 'mine') {
+                building.suppliesFactory = false;
             } else if (building.type === 'factory') {
                 building.clearSupplyChain();
             }
@@ -535,8 +586,8 @@ export default class TowerDefenseGame extends Phaser.Scene {
         this.buildings.forEach(building => {
             if (building.type === 'factory') {
                 const adjacent = this.getAdjacentBuildings(building);
-                const supplierFarms = adjacent.filter(adj => adj.type === 'farm');
-                building.updateSupplyChain(supplierFarms);
+                const suppliers = adjacent.filter(adj => adj.type === 'farm' || adj.type === 'mine');
+                building.updateSupplyChain(suppliers);
             }
         });
     }
@@ -636,7 +687,7 @@ export default class TowerDefenseGame extends Phaser.Scene {
     
     updateBuildings(time) {
         this.buildings.forEach(building => {
-            if (building.type === 'farm' || building.type === 'factory') {
+            if (building.type === 'farm' || building.type === 'factory' || building.type === 'mine') {
                 const goldEarned = building.update(time, this.gameSpeed);
                 if (goldEarned) {
                     this.currency += goldEarned;

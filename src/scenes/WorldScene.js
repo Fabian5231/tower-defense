@@ -72,9 +72,10 @@ export default class WorldScene extends Phaser.Scene {
         // Setup world camera viewport (center between left and right UI)
         this.cameras.main.setViewport(LEFT_W, 0, gameW - LEFT_W - RIGHT_W, gameH);
         this.worldCam = this.cameras.main;
-        this.worldCam.setBounds(0, 0, this.worldWidth, this.worldHeight);
-        this.worldCam.setRoundPixels(true);
-        this.worldCam.setBackgroundColor(0x1c3a29);
+        
+        // Setup camera bounds for the expanded world (like old version)
+        this.worldCam.setBounds(-200, -200, this.worldWidth + 400, this.worldHeight + 400);
+        this.worldCam.setZoom(0.8); // Zoom out um mehr zu sehen
         
         // Create world background
         this.createWorldBackground();
@@ -107,11 +108,8 @@ export default class WorldScene extends Phaser.Scene {
         this.scene.bringToTop('ui-left');
         this.scene.bringToTop('ui-right');
         
-        // Setup zoom system
-        this.recomputeMinZoom();
-        this.worldCam.setZoom(this.minZoom * 1.2); // Slightly zoomed in from minimum
+        // Initialize zoom input
         this.initZoomInput();
-        this.scale.on('resize', this.onResize, this);
         
         // Setup camera controls
         this.cursors = this.input.keyboard.createCursorKeys();
@@ -165,84 +163,19 @@ export default class WorldScene extends Phaser.Scene {
         graphics.setDepth(-1000);
     }
     
-    recomputeMinZoom() {
-        // Calculate minimum zoom so world always fills viewport
-        const vpW = this.worldCam.width;
-        const vpH = this.worldCam.height;
-        const zW = vpW / this.worldWidth;
-        const zH = vpH / this.worldHeight;
-        this.minZoom = Math.max(zW, zH);
-    }
     
-    clampCameraToBounds() {
-        // Keep camera within world bounds
-        const cam = this.worldCam;
-        const halfW = cam.width * 0.5 / cam.zoom;
-        const halfH = cam.height * 0.5 / cam.zoom;
-        const minX = halfW;
-        const maxX = this.worldWidth - halfW;
-        const minY = halfH;
-        const maxY = this.worldHeight - halfH;
-        
-        // Only clamp if we have valid bounds (maxX > minX, maxY > minY)
-        if (maxX > minX && maxY > minY) {
-            cam.centerOn(
-                Phaser.Math.Clamp(cam.midPoint.x, minX, maxX),
-                Phaser.Math.Clamp(cam.midPoint.y, minY, maxY)
-            );
-        }
-    }
     
     initZoomInput() {
         const cam = this.worldCam;
         
-        this.input.on('wheel', (_p, _go, _dx, dy) => {
-            const factor = dy > 0 ? 0.9 : 1.1;
-            
-            // Remember world position under pointer before zoom
-            const pointer = this.input.activePointer;
-            const worldPoint = cam.getWorldPoint(pointer.x - LEFT_W, pointer.y); // Adjust for left UI
-            const worldX = worldPoint.x;
-            const worldY = worldPoint.y;
-            
-            const nextZoom = Phaser.Math.Clamp(
-                cam.zoom * factor,
-                this.minZoom,
-                this.maxZoom
-            );
-            cam.setZoom(nextZoom);
-            
-            // After zoom: adjust camera so pointer stays on same world position
-            const worldPoint2 = cam.getWorldPoint(pointer.x - LEFT_W, pointer.y);
-            const worldX2 = worldPoint2.x;
-            const worldY2 = worldPoint2.y;
-            cam.scrollX += worldX - worldX2;
-            cam.scrollY += worldY - worldY2;
-            
-            this.clampCameraToBounds();
-        }, this);
+        this.input.on('wheel', (pointer, gameObjects, deltaX, deltaY, deltaZ) => {
+            const camera = this.worldCam;
+            const zoomFactor = deltaY > 0 ? 0.9 : 1.1;
+            const newZoom = Phaser.Math.Clamp(camera.zoom * zoomFactor, 0.5, 1.5);
+            camera.setZoom(newZoom);
+        });
     }
     
-    onResize(gameSize) {
-        const gameW = gameSize.width;
-        const gameH = gameSize.height;
-        
-        // Update viewport
-        this.worldCam.setViewport(LEFT_W, 0, gameW - LEFT_W - RIGHT_W, gameH);
-        
-        // Recompute min zoom and clamp current zoom
-        this.recomputeMinZoom();
-        this.worldCam.setZoom(
-            Phaser.Math.Clamp(this.worldCam.zoom, this.minZoom, this.maxZoom)
-        );
-        this.clampCameraToBounds();
-        
-        // Notify UI scenes to update their viewports
-        const uiL = this.scene.get('ui-left');
-        const uiR = this.scene.get('ui-right');
-        if (uiL) uiL.events.emit('ui:resize');
-        if (uiR) uiR.events.emit('ui:resize');
-    }
     
     setupUIEventHandlers() {
         // Events from UI scenes
@@ -302,31 +235,21 @@ export default class WorldScene extends Phaser.Scene {
     
     updateCameraMovement(delta) {
         const camera = this.worldCam;
-        const speed = 400 / camera.zoom; // Speed inversely proportional to zoom
+        const speed = 300 / camera.zoom; // Geschwindigkeit abhängig vom Zoom
         const moveDistance = speed * (delta / 1000);
-        
-        let moved = false;
         
         // WASD and Arrow key movement
         if (this.cursors.left.isDown || this.wasdKeys.A.isDown) {
             camera.scrollX -= moveDistance;
-            moved = true;
         }
         if (this.cursors.right.isDown || this.wasdKeys.D.isDown) {
             camera.scrollX += moveDistance;
-            moved = true;
         }
         if (this.cursors.up.isDown || this.wasdKeys.W.isDown) {
             camera.scrollY -= moveDistance;
-            moved = true;
         }
         if (this.cursors.down.isDown || this.wasdKeys.S.isDown) {
             camera.scrollY += moveDistance;
-            moved = true;
-        }
-        
-        if (moved) {
-            this.clampCameraToBounds();
         }
     }
     
@@ -413,9 +336,8 @@ export default class WorldScene extends Phaser.Scene {
     
     handleClick(pointer) {
         // Convert screen coordinates to world coordinates
-        const worldPoint = this.worldCam.getWorldPoint(pointer.x - LEFT_W, pointer.y);
-        const worldX = worldPoint.x;
-        const worldY = worldPoint.y;
+        const worldX = this.worldCam.scrollX + pointer.x - LEFT_W;
+        const worldY = this.worldCam.scrollY + pointer.y;
         
         // Ignore clicks in UI areas
         if (pointer.x <= LEFT_W || pointer.x >= this.scale.width - RIGHT_W) return;
@@ -429,9 +351,8 @@ export default class WorldScene extends Phaser.Scene {
     
     handleMouseMove(pointer) {
         // Convert screen coordinates to world coordinates
-        const worldPoint = this.worldCam.getWorldPoint(pointer.x - LEFT_W, pointer.y);
-        const worldX = worldPoint.x;
-        const worldY = worldPoint.y;
+        const worldX = this.worldCam.scrollX + pointer.x - LEFT_W;
+        const worldY = this.worldCam.scrollY + pointer.y;
         
         if (!this.selectedBuildingType || pointer.x <= LEFT_W || pointer.x >= this.scale.width - RIGHT_W) {
             // Clear building preview when outside game area

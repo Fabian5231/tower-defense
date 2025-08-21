@@ -100,6 +100,7 @@ createButtonBg(x, y) {
   );
   bg.setStrokeStyle(2, 0x666666);
   bg.setInteractive();
+  bg.setDepth(9999); // Maximum Z-Index für UI-Elemente
   return bg;
 }
 
@@ -112,14 +113,16 @@ createButton(x, y, _w, _h, label, cost, onClick) {
       fontSize: "14px",
       fill: "#fff"
     })
-    .setOrigin(0, 0.5);
+    .setOrigin(0, 0.5)
+    .setDepth(10000); // Text über Button-Hintergrund
 
   const costText = this.scene.add
     .text(x + this.layout.buttonWidth / 2 - 10, y, cost, {
       fontSize: "12px",
       fill: "#ffd700"
     })
-    .setOrigin(1, 0.5);
+    .setOrigin(1, 0.5)
+    .setDepth(10000); // Text über Button-Hintergrund
 
   button.on("pointerdown", onClick);
 
@@ -204,7 +207,7 @@ createButton(x, y, _w, _h, label, cost, onClick) {
             0.9
         );
         menuBg.setStrokeStyle(2, 0x666666);
-        menuBg.setDepth(-1);
+        menuBg.setDepth(9998); // Hinter den Buttons, aber über Terrain
     }
 
     /**
@@ -221,13 +224,15 @@ createButton(x, y, _w, _h, label, cost, onClick) {
         );
         button.setStrokeStyle(2, 0x666666);
         button.setInteractive();
+        button.setDepth(9999); // Maximum Z-Index für UI-Elemente
 
         const buttonText = this.scene.add
             .text(x, y, text, {
                 fontSize: "14px",
                 fill: "#fff"
             })
-            .setOrigin(0.5);
+            .setOrigin(0.5)
+            .setDepth(10000); // Text über Button-Hintergrund
 
         button.on("pointerdown", onClick);
         button.on("pointerover", () => button.setFillStyle(0x5a5a5a));
@@ -289,7 +294,8 @@ createSimpleButton(x, y, _w, _h, text, onClick, id = null) {
       fontSize: "14px",
       fill: "#fff"
     })
-    .setOrigin(0.5);
+    .setOrigin(0.5)
+    .setDepth(10000); // Text über Button-Hintergrund
 
   button.on("pointerdown", onClick);
   button.on("pointerover", () => button.setFillStyle(0x5a5a5a));

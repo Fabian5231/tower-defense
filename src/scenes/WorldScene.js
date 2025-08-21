@@ -69,13 +69,23 @@ export default class WorldScene extends Phaser.Scene {
         const gameW = this.scale.width;
         const gameH = this.scale.height;
         
-        // Setup world camera viewport (center between left and right UI)
+        // Setup world camera viewport (center between left and right UI)  
+        const SIDEBAR_W = RIGHT_W || 300;
         this.cameras.main.setViewport(LEFT_W, 0, gameW - LEFT_W - RIGHT_W, gameH);
         this.worldCam = this.cameras.main;
         
         // Setup camera bounds for the expanded world (like old version)
         this.worldCam.setBounds(-200, -200, this.worldWidth + 400, this.worldHeight + 400);
-        this.worldCam.setZoom(0.8); // Zoom out um mehr zu sehen
+        
+        // minZoom korrekt aus Viewport vs. Welt berechnen
+        this.recomputeMinZoom();
+        
+        // Anfangszoom in [minZoom, maxZoom] clampen (statt fix 0.8)
+        const initialZoom = Phaser.Math.Clamp(0.8, this.minZoom, this.maxZoom);
+        this.worldCam.setZoom(initialZoom);
+        
+        // Einmal clampen, damit die Kamera gültig steht
+        this.clampCameraToBounds();
         
         // Create world background
         this.createWorldBackground();
@@ -107,6 +117,23 @@ export default class WorldScene extends Phaser.Scene {
         this.scene.launch('ui-right');
         this.scene.bringToTop('ui-left');
         this.scene.bringToTop('ui-right');
+        
+        // Auf Fenster-Resize reagieren
+        this.scale.on("resize", (gs) => {
+            const SIDEBAR_W = RIGHT_W || 300;
+            
+            this.cameras.main.setViewport(LEFT_W, 0, gs.width - LEFT_W - SIDEBAR_W, gs.height);
+            this.recomputeMinZoom();
+            
+            const clamped = Phaser.Math.Clamp(
+                this.cameras.main.zoom,
+                this.minZoom,
+                this.maxZoom
+            );
+            this.cameras.main.setZoom(clamped);
+            
+            this.clampCameraToBounds();
+        });
         
         // Initialize zoom input
         this.initZoomInput();
@@ -165,14 +192,64 @@ export default class WorldScene extends Phaser.Scene {
     
     
     
-    initZoomInput() {
-        const cam = this.worldCam;
+    recomputeMinZoom() {
+        const cam = this.cameras.main;
         
-        this.input.on('wheel', (pointer, gameObjects, deltaX, deltaY, deltaZ) => {
-            const camera = this.worldCam;
-            const zoomFactor = deltaY > 0 ? 0.9 : 1.1;
-            const newZoom = Phaser.Math.Clamp(camera.zoom * zoomFactor, 0.5, 1.5);
-            camera.setZoom(newZoom);
+        // Falls du eine Sidebar/Viewport-Verkleinerung nutzt, muss der Viewport
+        // für minZoom bereits korrekt gesetzt sein (siehe create()).
+        const zW = cam.width / this.worldWidth;
+        const zH = cam.height / this.worldHeight;
+        
+        this.minZoom = Math.max(zW, zH);
+        this.maxZoom = 2.5; // ggf. anpassen
+    }
+    
+    clampCameraToBounds() {
+        const cam = this.cameras.main;
+        
+        // Behalte ggf. deine Sicherheitsränder
+        const minX = -200;
+        const minY = -200;
+        const maxX = this.worldWidth + 200;
+        const maxY = this.worldHeight + 200;
+        
+        const viewW = cam.width / cam.zoom;
+        const viewH = cam.height / cam.zoom;
+        
+        const maxScrollX = maxX - viewW;
+        const maxScrollY = maxY - viewH;
+        
+        cam.scrollX = Phaser.Math.Clamp(cam.scrollX, minX, Math.max(minX, maxScrollX));
+        cam.scrollY = Phaser.Math.Clamp(cam.scrollY, minY, Math.max(minY, maxScrollY));
+    }
+
+    initZoomInput() {
+        // Mouse wheel zoom (auf Mausposition verankert und geclamped)
+        this.input.on("wheel", (pointer, _gos, _dx, dy, _dz) => {
+            // Optional: Zoom ignorieren, wenn Maus über der Sidebar ist
+            const SIDEBAR_W = RIGHT_W || 300;
+            if (pointer.x > this.scale.width - SIDEBAR_W) return;
+            
+            const cam = this.cameras.main;
+            const factor = dy > 0 ? 0.9 : 1.1;
+            
+            // Weltposition unter der Maus vor dem Zoom merken
+            const before = cam.getWorldPoint(pointer.x, pointer.y);
+            
+            // Zoom clampen
+            const nextZoom = Phaser.Math.Clamp(
+                cam.zoom * factor,
+                this.minZoom,
+                this.maxZoom
+            );
+            cam.setZoom(nextZoom);
+            
+            // Nach Zoom: Weltposition unter der Maus konstant halten
+            const after = cam.getWorldPoint(pointer.x, pointer.y);
+            cam.scrollX += before.x - after.x;
+            cam.scrollY += before.y - after.y;
+            
+            this.clampCameraToBounds();
         });
     }
     
@@ -234,23 +311,32 @@ export default class WorldScene extends Phaser.Scene {
     }
     
     updateCameraMovement(delta) {
-        const camera = this.worldCam;
-        const speed = 300 / camera.zoom; // Geschwindigkeit abhängig vom Zoom
-        const moveDistance = speed * (delta / 1000);
+        if (!this.cursors || !this.wasdKeys) return;
         
-        // WASD and Arrow key movement
+        const cam = this.cameras.main;
+        const speed = 300 / cam.zoom;
+        const move = speed * (delta / 1000);
+        
+        let moved = false;
+        
         if (this.cursors.left.isDown || this.wasdKeys.A.isDown) {
-            camera.scrollX -= moveDistance;
+            cam.scrollX -= move;
+            moved = true;
         }
         if (this.cursors.right.isDown || this.wasdKeys.D.isDown) {
-            camera.scrollX += moveDistance;
+            cam.scrollX += move;
+            moved = true;
         }
         if (this.cursors.up.isDown || this.wasdKeys.W.isDown) {
-            camera.scrollY -= moveDistance;
+            cam.scrollY -= move;
+            moved = true;
         }
         if (this.cursors.down.isDown || this.wasdKeys.S.isDown) {
-            camera.scrollY += moveDistance;
+            cam.scrollY += move;
+            moved = true;
         }
+        
+        if (moved) this.clampCameraToBounds();
     }
     
     createTownHall() {
@@ -335,12 +421,14 @@ export default class WorldScene extends Phaser.Scene {
     }
     
     handleClick(pointer) {
-        // Convert screen coordinates to world coordinates
-        const worldX = this.worldCam.scrollX + pointer.x - LEFT_W;
-        const worldY = this.worldCam.scrollY + pointer.y;
+        // Optional: Kollision mit Sidebar abfangen
+        const SIDEBAR_W = RIGHT_W || 300;
+        if (pointer.x <= LEFT_W || pointer.x >= this.scale.width - SIDEBAR_W) return;
         
-        // Ignore clicks in UI areas
-        if (pointer.x <= LEFT_W || pointer.x >= this.scale.width - RIGHT_W) return;
+        const { x: worldX, y: worldY } = this.cameras.main.getWorldPoint(
+            pointer.x,
+            pointer.y
+        );
         
         if (this.selectedBuildingType && pointer.y > 100) {
             this.tryPlaceBuilding(worldX, worldY, this.selectedBuildingType);
@@ -350,18 +438,20 @@ export default class WorldScene extends Phaser.Scene {
     }
     
     handleMouseMove(pointer) {
-        // Convert screen coordinates to world coordinates
-        const worldX = this.worldCam.scrollX + pointer.x - LEFT_W;
-        const worldY = this.worldCam.scrollY + pointer.y;
-        
-        if (!this.selectedBuildingType || pointer.x <= LEFT_W || pointer.x >= this.scale.width - RIGHT_W) {
-            // Clear building preview when outside game area
-            if (this.hoverGraphic) {
-                this.hoverGraphic.setVisible(false);
-            }
+        const SIDEBAR_W = RIGHT_W || 300;
+        if (
+            !this.selectedBuildingType ||
+            pointer.x <= LEFT_W || 
+            pointer.x >= this.scale.width - SIDEBAR_W
+        ) {
+            if (this.hoverGraphic) this.hoverGraphic.setVisible(false);
             return;
         }
         
+        const { x: worldX, y: worldY } = this.cameras.main.getWorldPoint(
+            pointer.x,
+            pointer.y
+        );
         if (pointer.y > 100) {
             this.showBuildingPreview(worldX, worldY, this.selectedBuildingType);
         } else {

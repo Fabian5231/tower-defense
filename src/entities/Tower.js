@@ -78,20 +78,22 @@ export default class Tower {
         this.healthBar.setVisible(false);
     }
 
-    update(time, enemies, gameSpeed) {
-        // Da physics.world.timeScale die Zeit bereits skaliert, 
-        // brauchen wir keine weitere Anpassung der fireRate
-        if (time - this.lastFired > this.fireRate) {
-            const target = this.findBestTarget(enemies);
-            if (target) {
-                const projectile = this.fire(target);
-                this.lastFired = time;
-                return projectile;
-            }
-        }
+    update(time, enemies, gameSpeed = 1) {
+  // 2x gameSpeed => halbierte Fire-Rate => doppelt so oft schießen
+  const effectiveFireRate =
+    this.fireRate / (gameSpeed > 0 ? gameSpeed : 1);
 
-        return null;
+  if (time - this.lastFired >= effectiveFireRate) {
+    const target = this.findBestTarget(enemies);
+    if (target) {
+      const projectile = this.fire(target);
+      this.lastFired = time;
+      return projectile;
     }
+  }
+
+  return null;
+}
 
     findBestTarget(enemies) {
         let bestTarget = null;

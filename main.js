@@ -1,5 +1,6 @@
 import WorldScene from './src/scenes/WorldScene.js';
-import UIScene from './src/scenes/UIScene.js';
+import UISceneLeft from './src/scenes/UISceneLeft.js';
+import UISceneRight from './src/scenes/UISceneRight.js';
 
 const config = {
     type: Phaser.AUTO,
@@ -7,9 +8,13 @@ const config = {
     height: 720,
     parent: 'game-container',
     backgroundColor: '#1e1e1e',
-    scene: [WorldScene, UIScene],
+    scene: [WorldScene, UISceneLeft, UISceneRight],
     physics: {
         default: 'arcade'
+    },
+    render: { 
+        pixelArt: false, 
+        antialias: true 
     }
 };
 

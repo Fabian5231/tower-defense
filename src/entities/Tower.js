@@ -79,9 +79,9 @@ export default class Tower {
     }
 
     update(time, enemies, gameSpeed) {
-        const adjustedFireRate = this.fireRate / gameSpeed;
-
-        if (time - this.lastFired > adjustedFireRate) {
+        // Da physics.world.timeScale die Zeit bereits skaliert, 
+        // brauchen wir keine weitere Anpassung der fireRate
+        if (time - this.lastFired > this.fireRate) {
             const target = this.findBestTarget(enemies);
             if (target) {
                 const projectile = this.fire(target);

@@ -1,16 +1,16 @@
-import TowerDefenseGame from './src/scenes/TowerDefenseGame.js';
+import WorldScene from './src/scenes/WorldScene.js';
+import UIScene from './src/scenes/UIScene.js';
 
 const config = {
     type: Phaser.AUTO,
     width: 1200,
-    height: 800,
+    height: 720,
     parent: 'game-container',
-    backgroundColor: '#2c5f3f',
-    scene: TowerDefenseGame,
+    backgroundColor: '#1e1e1e',
+    scene: [WorldScene, UIScene],
     physics: {
         default: 'arcade'
-    },
-
+    }
 };
 
 const game = new Phaser.Game(config);

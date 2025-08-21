@@ -4,7 +4,8 @@ export default class BuildingMenu {
         onSelectBuilding,
         onToggleGrid,
         onTogglePause,
-        onChangeSpeed
+        onChangeSpeed,
+        options = { autoCreate: true }
     ) {
         this.scene = scene;
         this.onSelectBuilding = onSelectBuilding;
@@ -69,7 +70,7 @@ export default class BuildingMenu {
 
         // Layout-Konfiguration
         this.layout = {
-            menuX: 1200 - 200, // mapWidth - 200
+            menuX: 1200 - 200, // mapWidth - 200 (will be overridden by UIScene)
             menuY: 50,
             menuWidth: 180,
             elementSpacing: 20,
@@ -79,7 +80,10 @@ export default class BuildingMenu {
             currentY: 0
         };
 
-        this.createMenu();
+        // Only auto-create if requested
+        if (options.autoCreate) {
+            this.createMenu();
+        }
     }
 
     /**
@@ -161,7 +165,7 @@ createButton(x, y, _w, _h, label, cost, onClick) {
 
         // 1. Grid-Button
         this.createSimpleButton(
-            menuX + 100,
+            menuX,
             currentY,
             this.layout.buttonWidth,
             this.layout.buttonHeight,
@@ -179,7 +183,7 @@ createButton(x, y, _w, _h, label, cost, onClick) {
         Object.keys(this.buildingTypes).forEach((type) => {
             const building = this.buildingTypes[type];
             const buttonObj = this.createButton(
-                menuX + 100,
+                menuX,
                 currentY,
                 this.layout.buttonWidth,
                 this.layout.buttonHeight,
@@ -196,18 +200,18 @@ createButton(x, y, _w, _h, label, cost, onClick) {
             currentY += this.layout.buttonHeight + this.layout.elementSpacing;
         });
 
-        // 4. Menü-Hintergrund
-        const totalHeight = currentY - this.layout.menuY + 20;
-        const menuBg = this.scene.add.rectangle(
-            menuX + 100,
-            this.layout.menuY + totalHeight / 2,
-            this.layout.menuWidth,
-            totalHeight,
-            0x333333,
-            0.9
-        );
-        menuBg.setStrokeStyle(2, 0x666666);
-        menuBg.setDepth(9998); // Hinter den Buttons, aber über Terrain
+        // 4. Menü-Hintergrund (now handled by UIScene)
+        // const totalHeight = currentY - this.layout.menuY + 20;
+        // const menuBg = this.scene.add.rectangle(
+        //     menuX,
+        //     this.layout.menuY + totalHeight / 2,
+        //     this.layout.menuWidth,
+        //     totalHeight,
+        //     0x333333,
+        //     0.9
+        // );
+        // menuBg.setStrokeStyle(2, 0x666666);
+        // menuBg.setDepth(9998); // Hinter den Buttons, aber über Terrain
     }
 
     /**
@@ -255,7 +259,7 @@ createButton(x, y, _w, _h, label, cost, onClick) {
 
         // Pause Button
         const pauseBtn = this.createSimpleButton(
-            menuX + 100,
+            menuX,
             y,
             buttonWidth,
             buttonHeight,
@@ -266,7 +270,7 @@ createButton(x, y, _w, _h, label, cost, onClick) {
 
         // Speed Button (direkt darunter)
         const speedBtn = this.createSimpleButton(
-            menuX + 100,
+            menuX,
             y + buttonHeight + spacing,
             buttonWidth,
             buttonHeight,

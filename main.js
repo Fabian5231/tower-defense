@@ -15,6 +15,9 @@ const config = {
     render: { 
         pixelArt: false, 
         antialias: true 
+    },
+    input: {
+        keyboard: true
     }
 };
 

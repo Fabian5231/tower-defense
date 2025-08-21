@@ -184,10 +184,13 @@ export default class WorldScene extends Phaser.Scene {
         const minY = halfH;
         const maxY = this.worldHeight - halfH;
         
-        cam.centerOn(
-            Phaser.Math.Clamp(cam.midPoint.x, minX, maxX),
-            Phaser.Math.Clamp(cam.midPoint.y, minY, maxY)
-        );
+        // Only clamp if we have valid bounds (maxX > minX, maxY > minY)
+        if (maxX > minX && maxY > minY) {
+            cam.centerOn(
+                Phaser.Math.Clamp(cam.midPoint.x, minX, maxX),
+                Phaser.Math.Clamp(cam.midPoint.y, minY, maxY)
+            );
+        }
     }
     
     initZoomInput() {
@@ -302,21 +305,29 @@ export default class WorldScene extends Phaser.Scene {
         const speed = 400 / camera.zoom; // Speed inversely proportional to zoom
         const moveDistance = speed * (delta / 1000);
         
+        let moved = false;
+        
         // WASD and Arrow key movement
         if (this.cursors.left.isDown || this.wasdKeys.A.isDown) {
             camera.scrollX -= moveDistance;
+            moved = true;
         }
         if (this.cursors.right.isDown || this.wasdKeys.D.isDown) {
             camera.scrollX += moveDistance;
+            moved = true;
         }
         if (this.cursors.up.isDown || this.wasdKeys.W.isDown) {
             camera.scrollY -= moveDistance;
+            moved = true;
         }
         if (this.cursors.down.isDown || this.wasdKeys.S.isDown) {
             camera.scrollY += moveDistance;
+            moved = true;
         }
         
-        this.clampCameraToBounds();
+        if (moved) {
+            this.clampCameraToBounds();
+        }
     }
     
     createTownHall() {

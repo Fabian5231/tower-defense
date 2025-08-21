@@ -35,41 +35,64 @@ export default class TerrainManager {
     }
     
     generateMountains() {
-        const cols = Math.floor(this.mapWidth / this.gridSize);
-        const rows = Math.floor(this.mapHeight / this.gridSize);
-        
-        // Generate 3-5 mountain clusters
-        const mountainCount = 3 + Math.floor(Math.random() * 3);
-        
-        for (let i = 0; i < mountainCount; i++) {
-            const centerX = Math.floor(Math.random() * cols);
-            const centerY = Math.floor(Math.random() * rows);
-            const size = 2 + Math.floor(Math.random() * 3); // 2-4 tiles radius
-            
-            // Create mountain cluster
-            for (let dy = -size; dy <= size; dy++) {
-                for (let dx = -size; dx <= size; dx++) {
-                    const x = centerX + dx;
-                    const y = centerY + dy;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
-                    
-                    if (x >= 0 && x < cols && y >= 0 && y < rows && distance <= size) {
-                        // Don't place mountains too close to town hall (center)
-                        const townHallGridX = Math.floor(this.mapWidth / 2 / this.gridSize);
-                        const townHallGridY = Math.floor(this.mapHeight / 2 / this.gridSize);
-                        const distanceToTownHall = Math.sqrt(
-                            (x - townHallGridX) * (x - townHallGridX) + 
-                            (y - townHallGridY) * (y - townHallGridY)
-                        );
-                        
-                        if (distanceToTownHall > 5 && Math.random() > 0.3) {
-                            this.terrainGrid[y][x] = 'mountain';
-                        }
-                    }
-                }
-            }
+  const cols = Math.floor(this.mapWidth / this.gridSize);
+  const rows = Math.floor(this.mapHeight / this.gridSize);
+
+  // Wenn die Map kleiner als 9x9 ist, keine Berge setzen
+  const size = 3; // feste 9x9-Berge
+  if (cols < size || rows < size) return;
+
+  // Anzahl Berg-Cluster (wie vorher 3–5)
+  const mountainCount = 3 + Math.floor(Math.random() * 3);
+
+  // Townhall-Position im Grid
+  const townHallGridX = Math.floor(this.mapWidth / 2 / this.gridSize);
+  const townHallGridY = Math.floor(this.mapHeight / 2 / this.gridSize);
+
+  // Mindestabstand (wie vorher, in Tiles)
+  const minDistanceToTownHall = 3;
+
+  for (let i = 0; i < mountainCount; i++) {
+    let placed = false;
+    let attempts = 0;
+    const maxAttempts = 100;
+
+    while (!placed && attempts < maxAttempts) {
+      attempts++;
+
+      // zufällige Top-Left-Position, damit 9x9 sicher auf die Map passt
+      const topLeftX = Math.floor(Math.random() * (cols - size + 1));
+      const topLeftY = Math.floor(Math.random() * (rows - size + 1));
+
+      // Prüfen: Berührt der 9x9-Block den Mindestabstand zur Townhall?
+      let tooClose = false;
+      for (let dy = 0; dy < size && !tooClose; dy++) {
+        for (let dx = 0; dx < size; dx++) {
+          const x = topLeftX + dx;
+          const y = topLeftY + dy;
+          const d = Math.hypot(x - townHallGridX, y - townHallGridY);
+          if (d <= minDistanceToTownHall) {
+            tooClose = true;
+            break;
+          }
         }
+      }
+
+      if (tooClose) continue;
+
+      // 9x9 Block setzen (vollständig)
+      for (let dy = 0; dy < size; dy++) {
+        for (let dx = 0; dx < size; dx++) {
+          const x = topLeftX + dx;
+          const y = topLeftY + dy;
+          this.terrainGrid[y][x] = "mountain";
+        }
+      }
+
+      placed = true;
     }
+  }
+}
     
     generateRivers() {
         const cols = Math.floor(this.mapWidth / this.gridSize);

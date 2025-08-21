@@ -85,6 +85,72 @@ export default class BuildingMenu {
     /**
      * Erstellt das komplette Menü mit einfachem, gleichmäßigem Layout
      */
+
+
+    // 1) Gemeinsamer Hintergrund-Builder (einheitliche Größe/Optik)
+createButtonBg(x, y) {
+  const { buttonWidth, buttonHeight } = this.layout;
+  const bg = this.scene.add.rectangle(
+    x,
+    y,
+    buttonWidth,
+    buttonHeight,
+    0x4a4a4a,
+    0.9
+  );
+  bg.setStrokeStyle(2, 0x666666);
+  bg.setInteractive();
+  return bg;
+}
+
+// 3) Building-Button nutzt den gleichen Hintergrund (gleiche Größe)
+createButton(x, y, _w, _h, label, cost, onClick) {
+  const button = this.createButtonBg(x, y);
+
+  const labelText = this.scene.add
+    .text(x - this.layout.buttonWidth / 2 + 10, y, label, {
+      fontSize: "14px",
+      fill: "#fff"
+    })
+    .setOrigin(0, 0.5);
+
+  const costText = this.scene.add
+    .text(x + this.layout.buttonWidth / 2 - 10, y, cost, {
+      fontSize: "12px",
+      fill: "#ffd700"
+    })
+    .setOrigin(1, 0.5);
+
+  button.on("pointerdown", onClick);
+
+  button.on("pointerover", () => {
+    button.setFillStyle(0x5a5a5a);
+  });
+
+  button.on("pointerout", () => {
+    if (!button._isSelected) {
+      button.setFillStyle(0x4a4a4a);
+    }
+  });
+
+  return {
+    background: button,
+    labelText,
+    costText,
+    setSelected: (selected) => {
+      button._isSelected = selected;
+      button.setFillStyle(selected ? 0x6a6a6a : 0x4a4a4a);
+    },
+    updateCost: (newCost) => costText.setText(newCost),
+    updateLabel: (newLabel) => labelText.setText(newLabel),
+    destroy: () => {
+      button.destroy();
+      labelText.destroy();
+      costText.destroy();
+    }
+  };
+}
+
     createMenu() {
         const menuX = this.layout.menuX;
         const startY = this.layout.menuY + 30;
@@ -214,69 +280,27 @@ export default class BuildingMenu {
     /**
      * Creates a standardized button with background, label and cost text
      */
-    createButton(x, y, width, height, label, cost, onClick) {
-        const button = this.scene.add.rectangle(
-            x,
-            y,
-            width,
-            height,
-            0x4a4a4a,
-            0.9
-        );
-        button.setStrokeStyle(2, 0x666666);
-        button.setInteractive();
+    // 2) Simple-Button nutzt den gemeinsamen Hintergrund
+createSimpleButton(x, y, _w, _h, text, onClick, id = null) {
+  const button = this.createButtonBg(x, y);
 
-        const labelText = this.scene.add
-            .text(x - width / 2 + 10, y, label, {
-                fontSize: "14px",
-                fill: "#fff"
-            })
-            .setOrigin(0, 0.5);
+  const buttonText = this.scene.add
+    .text(x, y, text, {
+      fontSize: "14px",
+      fill: "#fff"
+    })
+    .setOrigin(0.5);
 
-        const costText = this.scene.add
-            .text(x + width / 2 - 10, y, cost, {
-                fontSize: "12px",
-                fill: "#ffd700"
-            })
-            .setOrigin(1, 0.5);
+  button.on("pointerdown", onClick);
+  button.on("pointerover", () => button.setFillStyle(0x5a5a5a));
+  button.on("pointerout", () => button.setFillStyle(0x4a4a4a));
 
-        button.on("pointerdown", onClick);
+  if (id) {
+    this.elements[id + "Text"] = buttonText;
+  }
 
-        button.on("pointerover", () => {
-            button.setFillStyle(0x5a5a5a);
-        });
-
-        button.on("pointerout", () => {
-            if (!button._isSelected) {
-                button.setFillStyle(0x4a4a4a);
-            }
-        });
-
-        return {
-            background: button,
-            labelText: labelText,
-            costText: costText,
-
-            setSelected: (selected) => {
-                button._isSelected = selected;
-                button.setFillStyle(selected ? 0x6a6a6a : 0x4a4a4a);
-            },
-
-            updateCost: (newCost) => {
-                costText.setText(newCost);
-            },
-
-            updateLabel: (newLabel) => {
-                labelText.setText(newLabel);
-            },
-
-            destroy: () => {
-                button.destroy();
-                labelText.destroy();
-                costText.destroy();
-            }
-        };
-    }
+  return { button, text: buttonText };
+}
 
     selectBuilding(type) {
         // ✅ Toggle-Funktion: Wenn das gleiche Gebäude nochmal angeklickt wird

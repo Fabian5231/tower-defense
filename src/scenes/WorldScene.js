@@ -198,8 +198,9 @@ export default class WorldScene extends Phaser.Scene {
             
             // Remember world position under pointer before zoom
             const pointer = this.input.activePointer;
-            const worldX = cam.getWorldPoint(pointer.x - LEFT_W, 0).x; // Adjust for left UI
-            const worldY = cam.getWorldPoint(0, pointer.y).y;
+            const worldPoint = cam.getWorldPoint(pointer.x - LEFT_W, pointer.y); // Adjust for left UI
+            const worldX = worldPoint.x;
+            const worldY = worldPoint.y;
             
             const nextZoom = Phaser.Math.Clamp(
                 cam.zoom * factor,
@@ -209,8 +210,9 @@ export default class WorldScene extends Phaser.Scene {
             cam.setZoom(nextZoom);
             
             // After zoom: adjust camera so pointer stays on same world position
-            const worldX2 = cam.getWorldPoint(pointer.x - LEFT_W, 0).x;
-            const worldY2 = cam.getWorldPoint(0, pointer.y).y;
+            const worldPoint2 = cam.getWorldPoint(pointer.x - LEFT_W, pointer.y);
+            const worldX2 = worldPoint2.x;
+            const worldY2 = worldPoint2.y;
             cam.scrollX += worldX - worldX2;
             cam.scrollY += worldY - worldY2;
             
@@ -400,8 +402,9 @@ export default class WorldScene extends Phaser.Scene {
     
     handleClick(pointer) {
         // Convert screen coordinates to world coordinates
-        const worldX = this.worldCam.getWorldPoint(pointer.x - LEFT_W, 0).x;
-        const worldY = this.worldCam.getWorldPoint(0, pointer.y).y;
+        const worldPoint = this.worldCam.getWorldPoint(pointer.x - LEFT_W, pointer.y);
+        const worldX = worldPoint.x;
+        const worldY = worldPoint.y;
         
         // Ignore clicks in UI areas
         if (pointer.x <= LEFT_W || pointer.x >= this.scale.width - RIGHT_W) return;
@@ -415,8 +418,9 @@ export default class WorldScene extends Phaser.Scene {
     
     handleMouseMove(pointer) {
         // Convert screen coordinates to world coordinates
-        const worldX = this.worldCam.getWorldPoint(pointer.x - LEFT_W, 0).x;
-        const worldY = this.worldCam.getWorldPoint(0, pointer.y).y;
+        const worldPoint = this.worldCam.getWorldPoint(pointer.x - LEFT_W, pointer.y);
+        const worldX = worldPoint.x;
+        const worldY = worldPoint.y;
         
         if (!this.selectedBuildingType || pointer.x <= LEFT_W || pointer.x >= this.scale.width - RIGHT_W) {
             // Clear building preview when outside game area

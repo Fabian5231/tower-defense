@@ -86,21 +86,25 @@ export default class Werfer {
     }
 
     update(time, enemies, gameSpeed = 1) {
-  // 2x gameSpeed => halbierte Fire-Rate => doppelt so oft schießen
-  const effectiveFireRate =
-    this.fireRate / (gameSpeed > 0 ? gameSpeed : 1);
+        // 2x gameSpeed => halbierte Fire-Rate => doppelt so oft schießen
+        const effectiveFireRate = this.fireRate / (gameSpeed > 0 ? gameSpeed : 1);
 
-  if (time - this.lastFired >= effectiveFireRate) {
-    const target = this.findBestTarget(enemies);
-    if (target) {
-      const projectile = this.fire(target);
-      this.lastFired = time;
-      return projectile;
+        if (time - this.lastFired >= effectiveFireRate) {
+            const target = this.findBestTarget(enemies);
+            if (target) {
+                // SOFORTIGER SCHADEN beim Schuss
+                const result = this.dealDamageToTarget(target);
+                
+                // Visuelles Projektil erstellen
+                const projectile = this.createVisualProjectile(target);
+                this.lastFired = time;
+                
+                return { projectile, damageResult: result };
+            }
+        }
+
+        return null;
     }
-  }
-
-  return null;
-}
 
     findBestTarget(enemies) {
         let bestTarget = null;
@@ -133,17 +137,33 @@ export default class Werfer {
         return bestTarget;
     }
 
-    fire(target) {
+    dealDamageToTarget(target) {
+        // Terrain-basierte Genauigkeit prüfen
+        let hitChance = 1.0;
+        if (this.scene.terrainManager) {
+            const targetGridX = Math.floor(target.x / 30);
+            const targetGridY = Math.floor(target.y / 30);
+            hitChance = this.scene.terrainManager.getAccuracyModifier(targetGridX, targetGridY);
+        }
+        
+        if (Math.random() <= hitChance) {
+            return target.takeDamage(this.damage);
+        }
+        
+        return { killed: false, score: 0, gold: 0 };
+    }
+    
+    createVisualProjectile(target) {
         return {
             x: this.x,
             y: this.y,
             targetX: target.x,
             targetY: target.y,
-            target: target, // Reference for guaranteed hit
-            speed: 200, // Langsamer als Tower-Projektile
-            damage: this.damage,
-            type: 'werfer', // ✅ Markierung für größere Projektile
-            graphic: this.scene.add.circle(this.x, this.y, 6, 0xFF6600) // ✅ Größerer, oranger Kreis
+            speed: 300,
+            lifetime: 0.8, // Länger für Werfer (größere Projektile)
+            maxLifetime: 0.8,
+            type: 'werfer',
+            graphic: this.scene.add.circle(this.x, this.y, 6, 0xFF6600)
         };
     }
 

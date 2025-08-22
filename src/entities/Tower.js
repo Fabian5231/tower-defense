@@ -81,21 +81,25 @@ export default class Tower {
     }
 
     update(time, enemies, gameSpeed = 1) {
-  // 2x gameSpeed => halbierte Fire-Rate => doppelt so oft schießen
-  const effectiveFireRate =
-    this.fireRate / (gameSpeed > 0 ? gameSpeed : 1);
+        // 2x gameSpeed => halbierte Fire-Rate => doppelt so oft schießen
+        const effectiveFireRate = this.fireRate / (gameSpeed > 0 ? gameSpeed : 1);
 
-  if (time - this.lastFired >= effectiveFireRate) {
-    const target = this.findBestTarget(enemies);
-    if (target) {
-      const projectile = this.fire(target);
-      this.lastFired = time;
-      return projectile;
+        if (time - this.lastFired >= effectiveFireRate) {
+            const target = this.findBestTarget(enemies);
+            if (target) {
+                // SOFORTIGER SCHADEN beim Schuss (kein Warten auf Projektil-Treffer)
+                const result = this.dealDamageToTarget(target);
+                
+                // Visuelles Projektil erstellen
+                const projectile = this.createVisualProjectile(target);
+                this.lastFired = time;
+                
+                return { projectile, damageResult: result };
+            }
+        }
+
+        return null;
     }
-  }
-
-  return null;
-}
 
     findBestTarget(enemies) {
         let bestTarget = null;
@@ -128,15 +132,32 @@ export default class Tower {
         return bestTarget;
     }
 
-    fire(target) {
+    dealDamageToTarget(target) {
+        // Terrain-basierte Genauigkeit prüfen
+        let hitChance = 1.0;
+        if (this.scene.terrainManager) {
+            const targetGridX = Math.floor(target.x / 30); // gridSize
+            const targetGridY = Math.floor(target.y / 30);
+            hitChance = this.scene.terrainManager.getAccuracyModifier(targetGridX, targetGridY);
+        }
+        
+        // Treffer-Roll basierend auf Terrain
+        if (Math.random() <= hitChance) {
+            return target.takeDamage(this.damage);
+        }
+        
+        return { killed: false, score: 0, gold: 0 }; // Verfehlt
+    }
+    
+    createVisualProjectile(target) {
         return {
             x: this.x,
             y: this.y,
             targetX: target.x,
             targetY: target.y,
-            target: target, // Reference for guaranteed hit
-            speed: 300,
-            damage: this.damage,
+            speed: 400, // Schneller für bessere Optik
+            lifetime: 0.6, // 0.6 Sekunden Lebensdauer
+            maxLifetime: 0.6,
             graphic: this.scene.add.circle(this.x, this.y, 3, 0xffff00)
         };
     }

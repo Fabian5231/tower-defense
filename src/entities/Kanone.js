@@ -87,15 +87,19 @@ export default class Kanone {
 
     update(time, enemies, gameSpeed = 1) {
         // 2x gameSpeed => halbierte Fire-Rate => doppelt so oft schießen
-        const effectiveFireRate =
-            this.fireRate / (gameSpeed > 0 ? gameSpeed : 1);
+        const effectiveFireRate = this.fireRate / (gameSpeed > 0 ? gameSpeed : 1);
 
         if (time - this.lastFired >= effectiveFireRate) {
             const target = this.findBestTarget(enemies);
             if (target) {
-                const projectile = this.fire(target);
+                // SOFORTIGER SCHADEN beim Schuss
+                const result = this.dealDamageToTarget(target);
+                
+                // Visuelles Projektil erstellen
+                const projectile = this.createVisualProjectile(target);
                 this.lastFired = time;
-                return projectile;
+                
+                return { projectile, damageResult: result };
             }
         }
 
@@ -133,17 +137,33 @@ export default class Kanone {
         return bestTarget;
     }
 
-    fire(target) {
+    dealDamageToTarget(target) {
+        // Terrain-basierte Genauigkeit prüfen
+        let hitChance = 1.0;
+        if (this.scene.terrainManager) {
+            const targetGridX = Math.floor(target.x / 30);
+            const targetGridY = Math.floor(target.y / 30);
+            hitChance = this.scene.terrainManager.getAccuracyModifier(targetGridX, targetGridY);
+        }
+        
+        if (Math.random() <= hitChance) {
+            return target.takeDamage(this.damage);
+        }
+        
+        return { killed: false, score: 0, gold: 0 };
+    }
+    
+    createVisualProjectile(target) {
         return {
             x: this.x,
             y: this.y,
             targetX: target.x,
             targetY: target.y,
-            target: target, // Reference for guaranteed hit
-            speed: 400, // Schneller als Werfer
-            damage: this.damage,
-            type: 'kanone', // Markierung für Kanonen-Projektile
-            graphic: this.scene.add.circle(this.x, this.y, 4, 0x708090) // Graues, mittelgroßes Projektil
+            speed: 500, // Schneller für Kanonen
+            lifetime: 0.4, // Kurz für schnelle Kanonen
+            maxLifetime: 0.4,
+            type: 'kanone',
+            graphic: this.scene.add.circle(this.x, this.y, 4, 0x708090)
         };
     }
 

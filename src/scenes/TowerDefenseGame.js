@@ -684,10 +684,21 @@ export default class TowerDefenseGame extends Phaser.Scene {
     
     updateTowers(time) {
         this.towers.forEach(tower => {
-            const projectile = tower.update(time, this.enemies, this.gameSpeed);
-            if (projectile) {
-                projectile.toRemove = false;
-                this.projectiles.push(projectile);
+            const result = tower.update(time, this.enemies, this.gameSpeed);
+            if (result) {
+                // Schaden wurde bereits beim Schuss verursacht
+                if (result.damageResult && result.damageResult.killed) {
+                    this.score += result.damageResult.score;
+                    this.currency += result.damageResult.gold;
+                    this.hud.updateScore(this.score);
+                    this.hud.updateCurrency(this.currency);
+                }
+                
+                // Visuelles Projektil hinzufügen
+                if (result.projectile) {
+                    result.projectile.toRemove = false;
+                    this.projectiles.push(result.projectile);
+                }
             }
         });
     }
@@ -706,51 +717,40 @@ export default class TowerDefenseGame extends Phaser.Scene {
     
     updateProjectiles(delta) {
         this.projectiles.forEach(projectile => {
-            if (projectile.target && !projectile.target.toRemove) {
-                projectile.targetX = projectile.target.x;
-                projectile.targetY = projectile.target.y;
+            // SOFORT entfernen wenn bereits als toRemove markiert
+            if (projectile.toRemove) {
+                return;
             }
             
+            // Lifetime-System: Projektile verschwinden nach Zeit
+            projectile.lifetime -= (delta / 1000) * this.gameSpeed;
+            if (projectile.lifetime <= 0) {
+                projectile.toRemove = true;
+                return;
+            }
+            
+            // Einfache Bewegung in Richtung Ziel (nur visuell)
             const direction = {
                 x: projectile.targetX - projectile.x,
                 y: projectile.targetY - projectile.y
             };
             const distance = Math.sqrt(direction.x * direction.x + direction.y * direction.y);
             
-            if (distance < 8) {
+            // Sicherheitscheck: keine Bewegung wenn Ziel erreicht oder distance = 0
+            if (distance < 5 || distance === 0) {
                 projectile.toRemove = true;
-                
-                if (projectile.target && !projectile.target.toRemove) {
-                    // Check terrain-based accuracy modifier
-                    let hitChance = 1.0; // 100% hit chance by default
-                    if (this.terrainManager) {
-                        const targetGridX = Math.floor(projectile.target.x / this.gridSize);
-                        const targetGridY = Math.floor(projectile.target.y / this.gridSize);
-                        hitChance = this.terrainManager.getAccuracyModifier(targetGridX, targetGridY);
-                    }
-                    
-                    // Roll for hit based on terrain
-                    if (Math.random() <= hitChance) {
-                        const result = projectile.target.takeDamage(projectile.damage);
-                        
-                        if (result.killed) {
-                            this.score += result.score;
-                            this.currency += result.gold;
-                            this.hud.updateScore(this.score);
-                            this.hud.updateCurrency(this.currency);
-                        }
-                    }
-                }
                 return;
             }
             
+            // Normalisierte Richtung
             direction.x /= distance;
             direction.y /= distance;
             
-            // Projektil-Geschwindigkeit mit gameSpeed skalieren
+            // Projektil-Bewegung (nur visuell, kein Schaden-Handling)
             projectile.x += direction.x * projectile.speed * (delta / 1000) * this.gameSpeed;
             projectile.y += direction.y * projectile.speed * (delta / 1000) * this.gameSpeed;
             
+            // Grafik-Position aktualisieren
             projectile.graphic.x = projectile.x;
             projectile.graphic.y = projectile.y;
         });

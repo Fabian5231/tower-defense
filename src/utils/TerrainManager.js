@@ -30,7 +30,6 @@ export default class TerrainManager {
         this.generateMountains();
         this.generateRivers();
         this.generateForests();
-        this.generateBridges();
         this.renderTerrain();
     }
     
@@ -182,22 +181,6 @@ export default class TerrainManager {
         }
     }
     
-    generateBridges() {
-        const cols = Math.floor(this.mapWidth / this.gridSize);
-        const rows = Math.floor(this.mapHeight / this.gridSize);
-        
-        // Find river tiles and create bridges
-        for (let y = 0; y < rows; y++) {
-            for (let x = 0; x < cols; x++) {
-                if (this.terrainGrid[y][x] === 'river') {
-                    // Chance to create a bridge
-                    if (Math.random() < 0.1) { // 10% chance per river tile
-                        this.terrainGrid[y][x] = 'bridge';
-                    }
-                }
-            }
-        }
-    }
     
     renderTerrain() {
         // Clear existing terrain graphics
@@ -259,15 +242,6 @@ export default class TerrainManager {
                 this.terrainGraphics.push(treeSymbol);
                 break;
                 
-            case 'bridge':
-                // Bridge over river
-                graphic = this.scene.add.rectangle(
-                    x, y, 
-                    this.gridSize - 2, this.gridSize - 2, 
-                    0x8B4513 // Brown for bridge
-                );
-                break;
-                
             // 'grass' is default - no special rendering needed
         }
         
@@ -287,7 +261,7 @@ export default class TerrainManager {
     
     canPlaceBuildingAt(gridX, gridY) {
         const terrain = this.getTerrainAt(gridX, gridY);
-        // Can't build on mountains or rivers (but can build on bridges)
+        // Can't build on mountains or rivers
         return terrain !== 'mountain' && terrain !== 'river';
     }
     
@@ -299,8 +273,6 @@ export default class TerrainManager {
                 return 0.5; // 50% speed (slow movement through water)
             case 'forest':
                 return 0.8; // 80% speed (slightly slower through forest)
-            case 'bridge':
-                return 1.0; // Normal speed on bridges
             case 'mountain':
                 return 0; // Can't move through mountains
             default:

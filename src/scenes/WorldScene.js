@@ -101,7 +101,18 @@ this.worldCam.setBounds(0, 0, this.worldWidth, this.worldHeight);
         this.infoPanel = new InfoPanel(this);
         
         // Create town hall
-        this.createTownHall();
+        // Create town hall
+this.createTownHall();
+
+// Kamera auf Rathaus zentrieren + Zielwerte setzen
+this.worldCam.centerOn(this.townHall.x, this.townHall.y);
+this.targetScrollX = this.worldCam.scrollX;
+this.targetScrollY = this.worldCam.scrollY;
+this.clampCameraToBounds();
+
+// Initialize first wave
+this.waveManager.enemiesInWave = this.waveManager.getWaveEnemyCount(this.waveManager.currentWave);
+this.updateHUD();
 
 // Kamera auf Rathaus zentrieren (mit aktuellem Zoom)
 this.worldCam.setScroll(
@@ -151,51 +162,59 @@ this.worldCam.setScroll(
     }
     
     createWorldBackground() {
-        // Create textured green background with grass pattern
-        const graphics = this.add.graphics();
-        
-        // Base green background
-        graphics.fillStyle(0x2d5c2b, 1.0);
-        graphics.fillRect(0, 0, this.worldWidth, this.worldHeight);
-        
-        // Add lighter green texture patches
-        const patchSize = 60;
-        const patches = Math.floor((this.worldWidth * this.worldHeight) / 6000); // Scale patches with world size
-        
-        for (let i = 0; i < patches; i++) {
-            const x = Math.random() * this.worldWidth;
-            const y = Math.random() * this.worldHeight;
-            const size = patchSize + Math.random() * 30 - 15;
-            
-            const greenShades = [0x3a6b38, 0x2f5f2d, 0x426c40, 0x377d35];
-            const color = greenShades[Math.floor(Math.random() * greenShades.length)];
-            
-            graphics.fillStyle(color, 0.6);
-            graphics.fillCircle(x, y, size);
-        }
-        
-        // Add subtle dirt patches
-        for (let i = 0; i < patches / 4; i++) {
-            const x = Math.random() * this.worldWidth;
-            const y = Math.random() * this.worldHeight;
-            const size = 20 + Math.random() * 15;
-            
-            graphics.fillStyle(0x6b4423, 0.4);
-            graphics.fillCircle(x, y, size);
-        }
-        
-        // Add small grass detail dots
-        for (let i = 0; i < patches * 1.5; i++) {
-            const x = Math.random() * this.worldWidth;
-            const y = Math.random() * this.worldHeight;
-            const size = 2 + Math.random() * 3;
-            
-            graphics.fillStyle(0x4a7c48, 0.8);
-            graphics.fillCircle(x, y, size);
-        }
-        
-        graphics.setDepth(-1000);
+    const graphics = this.add.graphics();
+
+    // Base green background
+    graphics.fillStyle(0x2d5c2b, 1.0);
+    graphics.fillRect(0, 0, this.worldWidth, this.worldHeight);
+
+    // Add lighter green texture patches
+    const patchSize = 60;
+    const patches = Math.floor((this.worldWidth * this.worldHeight) / 6000);
+
+    for (let i = 0; i < patches; i++) {
+        const x = Math.random() * this.worldWidth;
+        const y = Math.random() * this.worldHeight;
+        const size = patchSize + Math.random() * 30 - 15;
+
+        const greenShades = [0x3a6b38, 0x2f5f2d, 0x426c40, 0x377d35];
+        const color = greenShades[Math.floor(Math.random() * greenShades.length)];
+
+        graphics.fillStyle(color, 0.6);
+        graphics.fillCircle(x, y, size);
     }
+
+    // Add dirt patches
+    for (let i = 0; i < patches / 4; i++) {
+        const x = Math.random() * this.worldWidth;
+        const y = Math.random() * this.worldHeight;
+        const size = 20 + Math.random() * 15;
+
+        graphics.fillStyle(0x6b4423, 0.4);
+        graphics.fillCircle(x, y, size);
+    }
+
+    // Add small grass detail dots
+    for (let i = 0; i < patches * 1.5; i++) {
+        const x = Math.random() * this.worldWidth;
+        const y = Math.random() * this.worldHeight;
+        const size = 2 + Math.random() * 3;
+
+        graphics.fillStyle(0x4a7c48, 0.8);
+        graphics.fillCircle(x, y, size);
+    }
+
+    // 👉 In eine Textur rendern
+    graphics.generateTexture("background", this.worldWidth, this.worldHeight);
+
+    // Graphics-Objekt löschen (brauchen wir nicht mehr)
+    graphics.destroy();
+
+    // 👉 Als statisches Bild hinzufügen
+    this.add.image(0, 0, "background")
+        .setOrigin(0)   // oben links
+        .setDepth(-1000);
+}
     
     
     
@@ -317,33 +336,32 @@ this.worldCam.setScroll(
     }
     
     updateCameraMovement(delta) {
-        if (!this.cursors || !this.wasdKeys) return;
-        
-        const cam = this.cameras.main;
-        const speed = 300 / cam.zoom;
-        const move = speed * (delta / 1000);
-        
-        let moved = false;
-        
-        if (this.cursors.left.isDown || this.wasdKeys.A.isDown) {
-            cam.scrollX -= move;
-            moved = true;
-        }
-        if (this.cursors.right.isDown || this.wasdKeys.D.isDown) {
-            cam.scrollX += move;
-            moved = true;
-        }
-        if (this.cursors.up.isDown || this.wasdKeys.W.isDown) {
-            cam.scrollY -= move;
-            moved = true;
-        }
-        if (this.cursors.down.isDown || this.wasdKeys.S.isDown) {
-            cam.scrollY += move;
-            moved = true;
-        }
-        
-        if (moved) this.clampCameraToBounds();
+    if (!this.cursors || !this.wasdKeys) return;
+
+    const cam = this.cameras.main;
+    const speed = 1000; // Zielgeschwindigkeit in Pixel pro Sekunde
+    const move = speed * (delta / 1000);
+
+    // Zielposition berechnen
+    if (this.cursors.left.isDown || this.wasdKeys.A.isDown) {
+        this.targetScrollX -= move;
     }
+    if (this.cursors.right.isDown || this.wasdKeys.D.isDown) {
+        this.targetScrollX += move;
+    }
+    if (this.cursors.up.isDown || this.wasdKeys.W.isDown) {
+        this.targetScrollY -= move;
+    }
+    if (this.cursors.down.isDown || this.wasdKeys.S.isDown) {
+        this.targetScrollY += move;
+    }
+
+    // Sanftes Gleiten (Lerp)
+    cam.scrollX = Phaser.Math.Linear(cam.scrollX, this.targetScrollX, 0.15);
+    cam.scrollY = Phaser.Math.Linear(cam.scrollY, this.targetScrollY, 0.15);
+
+    this.clampCameraToBounds();
+}
     
     createTownHall() {
         const centerGridPos = this.gridManager.worldToGrid(this.mapCenter.x, this.mapCenter.y);

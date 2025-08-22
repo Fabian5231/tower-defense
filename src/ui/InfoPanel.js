@@ -75,12 +75,12 @@ export default class InfoPanel {
     createUpgradeButton(building, onUpgrade) {
         const buttonY = this.elements.infoPanel.y + this.elements.infoPanel.height / 2 + 25;
         const buildingTypes = {
-            tower: { maxLevel: 5 },
-            werfer: { maxLevel: 5 },
-            farm: { maxLevel: 5 },
-            factory: { maxLevel: 5 },
-            mine: { maxLevel: 5 }
-        };
+    tower: { maxLevel: 5 },
+    werfer: { maxLevel: 5 },
+    farm: { maxLevel: 5 },
+    factory: { maxLevel: 5 },
+    mine: { maxLevel: 5 }
+};
         const maxLevel = buildingTypes[building.type].maxLevel;
         
         if (building.level < maxLevel) {
@@ -217,12 +217,12 @@ export default class InfoPanel {
     
     getUpgradeCost(buildingType, currentLevel) {
         const baseCosts = {
-            tower: 10,
-            werfer: 50,
-            farm: 10,
-            factory: 10,
-            mine: 30
-        };
+    tower: 10,
+    werfer: 50,
+    farm: 10,
+    factory: 10,
+    mine: 30
+};
         const baseCost = baseCosts[buildingType];
         return Math.floor(baseCost * (currentLevel + 1) * 1.5);
     }

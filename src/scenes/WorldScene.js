@@ -525,6 +525,7 @@ this.worldCam.setScroll(
         const buildingTypes = {
             tower: { cost: 10, range: 80 },
             werfer: { cost: 50, range: 200 },
+            kanone: { cost: 30, range: 60 },   // <--- HINZUGEFÜGT
             farm: { cost: 10 },
             factory: { cost: 10 },
             mine: { cost: 30 }
@@ -686,20 +687,28 @@ this.worldCam.setScroll(
     }
     
     getRotatedDimensions(buildingType, rotation) {
-        const dimensions = {
-            tower: { width: 1, height: 1 },
-            werfer: { width: 1, height: 1 },
-            farm: { width: 1, height: 2 },
-            factory: { width: 2, height: 1 },
-            mine: { width: 1, height: 1 }
-        };
-        
-        const base = dimensions[buildingType];
-        if (rotation === 90 || rotation === 270) {
-            return { width: base.height, height: base.width };
-        }
-        return { width: base.width, height: base.height };
+
+
+    const dimensions = {
+        tower: { width: 1, height: 1 },
+        kanone: { width: 1, height: 1 },
+        werfer: { width: 1, height: 1 },
+        farm: { width: 1, height: 2 },
+        factory: { width: 2, height: 1 },
+        mine: { width: 1, height: 1 }
+    };
+
+    const base = dimensions[buildingType];
+    if (!base) {
+        console.warn("Unknown buildingType:", buildingType);
+        return { width: 1, height: 1 }; // fallback, damit es nicht crasht
     }
+
+    if (rotation === 90 || rotation === 270) {
+        return { width: base.height, height: base.width };
+    }
+    return { width: base.width, height: base.height };
+}
     
     getUpgradeCost(buildingType, currentLevel) {
         const baseCosts = {

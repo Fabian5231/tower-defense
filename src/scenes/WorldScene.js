@@ -713,6 +713,7 @@ this.worldCam.setScroll(
     getUpgradeCost(buildingType, currentLevel) {
         const baseCosts = {
             tower: 10,
+            kanone: 20,
             werfer: 50,
             farm: 10,
             factory: 10,

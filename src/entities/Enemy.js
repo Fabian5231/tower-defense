@@ -8,10 +8,14 @@ export default class Enemy {
         this.health = config.health || 50;
         this.maxHealth = this.health;
         this.speed = config.speed || 50;
-        this.isBoss = config.isBoss || false;
+        this.type = config.type || 'normal';
+        this.isBoss = config.isBoss || this.type === 'boss';
         this.goldReward = config.goldReward || 1;
-        this.size = this.isBoss ? 35 : 20;
-        this.color = this.isBoss ? 0x800080 : 0xff0000;
+        
+        // Visueller Typ-basierte Eigenschaften
+        this.symbol = config.symbol || '👹';
+        this.size = this.isBoss ? 35 : (this.type === 'fast' ? 15 : 20);
+        this.color = config.color || (this.isBoss ? 0x800080 : 0xff0000);
         
         // Pathfinding properties
         this.path = []; // Current path to follow
@@ -29,6 +33,12 @@ export default class Enemy {
     createGraphics() {
         // Main enemy graphic
         this.graphic = this.scene.add.rectangle(this.x, this.y, this.size, this.size, this.color);
+        
+        // Typ-spezifische Symbole hinzufügen
+        this.symbolText = this.scene.add.text(this.x, this.y, this.symbol, {
+            fontSize: this.isBoss ? '20px' : '12px',
+            align: 'center'
+        }).setOrigin(0.5);
         
         // Health bars
         this.healthBarBg = this.scene.add.rectangle(
@@ -375,6 +385,8 @@ export default class Enemy {
     updateGraphics() {
         this.graphic.x = this.x;
         this.graphic.y = this.y;
+        this.symbolText.x = this.x;
+        this.symbolText.y = this.y;
         this.healthBarBg.x = this.x;
         this.healthBarBg.y = this.y - (this.isBoss ? 25 : 15);
         this.healthBar.x = this.x;
@@ -416,6 +428,7 @@ export default class Enemy {
     
     destroy() {
         this.graphic.destroy();
+        this.symbolText.destroy();
         this.healthBarBg.destroy();
         this.healthBar.destroy();
         if (this.bossSymbol) {

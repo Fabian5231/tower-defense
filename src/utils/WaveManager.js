@@ -14,15 +14,18 @@ export default class WaveManager {
     }
     
     getWaveEnemyHealth(wave) {
-        return Math.floor(this.baseEnemyHealth + (wave * 15)); // +15 HP per wave
+        // Exponentielles Scaling: +35% HP pro Welle (wird schnell gefährlich)
+        return Math.floor(this.baseEnemyHealth * Math.pow(1.35, wave - 1));
     }
     
     getWaveEnemySpeed(wave) {
-        return Math.floor(this.baseEnemySpeed + (wave * 3)); // +3 speed per wave
+        // Moderates exponentielles Speed-Scaling: +15% pro Welle
+        return Math.floor(this.baseEnemySpeed * Math.pow(1.15, wave - 1));
     }
     
     getBossHealth(wave) {
-        return Math.floor(this.getWaveEnemyHealth(wave) * 8); // Boss has 8x normal enemy health
+        // Boss wird mit jeder Welle proportional stärker
+        return Math.floor(this.getWaveEnemyHealth(wave) * (8 + wave * 2)); // 8x + 2x pro Welle
     }
     
     shouldSpawnBoss(wave) {
@@ -75,12 +78,70 @@ export default class WaveManager {
                 goldReward: 5 // Proportional reduziert: 25 → 5 (5x normale Gegner)
             };
         } else {
-            return {
-                health: this.getWaveEnemyHealth(this.currentWave),
-                speed: this.getWaveEnemySpeed(this.currentWave),
-                isBoss: false,
-                goldReward: 1
-            };
+            // Spezialisierte Monster-Typen basierend auf Welle
+            const enemyType = this.getEnemyType();
+            const baseHealth = this.getWaveEnemyHealth(this.currentWave);
+            const baseSpeed = this.getWaveEnemySpeed(this.currentWave);
+            
+            return this.getSpecializedEnemyStats(enemyType, baseHealth, baseSpeed);
+        }
+    }
+    
+    getEnemyType() {
+        // Ab Welle 3 spawnen verschiedene Typen
+        if (this.currentWave < 3) return 'normal';
+        
+        const rand = Math.random();
+        const wave = this.currentWave;
+        
+        // Wahrscheinlichkeiten ändern sich mit der Welle
+        if (wave >= 8 && rand < 0.25) return 'armored';  // 25% ab Welle 8
+        if (wave >= 5 && rand < 0.35) return 'fast';     // 35% ab Welle 5
+        if (wave >= 10 && rand < 0.15) return 'stealth'; // 15% ab Welle 10
+        return 'normal'; // Rest sind normale Gegner
+    }
+    
+    getSpecializedEnemyStats(type, baseHealth, baseSpeed) {
+        switch (type) {
+            case 'fast':
+                return {
+                    health: Math.floor(baseHealth * 0.6),  // 60% HP
+                    speed: Math.floor(baseSpeed * 1.8),    // 180% Speed
+                    type: 'fast',
+                    symbol: '💨',  // Wind-Symbol
+                    color: 0x00FFFF,  // Cyan
+                    goldReward: 1
+                };
+                
+            case 'armored':
+                return {
+                    health: Math.floor(baseHealth * 2.5),  // 250% HP
+                    speed: Math.floor(baseSpeed * 0.6),    // 60% Speed
+                    type: 'armored',
+                    symbol: '🛡️',   // Schild-Symbol
+                    color: 0x888888,  // Grau
+                    goldReward: 2
+                };
+                
+            case 'stealth':
+                return {
+                    health: Math.floor(baseHealth * 0.8),  // 80% HP
+                    speed: Math.floor(baseSpeed * 1.2),    // 120% Speed
+                    type: 'stealth',
+                    symbol: '🕵️',   // Detective-Symbol
+                    color: 0x4B0082,  // Indigo
+                    goldReward: 2
+                };
+                
+            default: // normal
+                return {
+                    health: baseHealth,
+                    speed: baseSpeed,
+                    type: 'normal',
+                    symbol: '👹',   // Standard Ogre
+                    color: 0xff0000,  // Rot
+                    goldReward: 1
+                };
         }
     }
 }

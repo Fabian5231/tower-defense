@@ -1082,5 +1082,64 @@ this.worldCam.setScroll(
     gameOver() {
         this.events.emit('hud:gameOver', this.score);
         this.scene.pause();
+        this.showGameOverOverlay();
+    }
+    
+    showGameOverOverlay() {
+        // Create dark overlay over entire world scene
+        const overlay = this.add.rectangle(
+            this.cameras.main.centerX,
+            this.cameras.main.centerY,
+            this.scale.width,
+            this.scale.height,
+            0x000000,
+            0.8
+        );
+        overlay.setDepth(10000);
+        
+        // Game over title
+        const gameOverText = this.add.text(
+            this.cameras.main.centerX,
+            this.cameras.main.centerY - 60,
+            '💀 RATHAUS ZERSTÖRT! 💀',
+            {
+                fontSize: '48px',
+                fill: '#ff0000',
+                fontFamily: 'Arial, sans-serif',
+                align: 'center'
+            }
+        );
+        gameOverText.setOrigin(0.5);
+        gameOverText.setDepth(10001);
+        
+        // Final score
+        const scoreText = this.add.text(
+            this.cameras.main.centerX,
+            this.cameras.main.centerY,
+            `Endpunktzahl: ${this.score.toLocaleString()}`,
+            {
+                fontSize: '24px',
+                fill: '#ffffff',
+                fontFamily: 'Arial, sans-serif',
+                align: 'center'
+            }
+        );
+        scoreText.setOrigin(0.5);
+        scoreText.setDepth(10001);
+        
+        // Restart instruction
+        const restartText = this.add.text(
+            this.cameras.main.centerX,
+            this.cameras.main.centerY + 50,
+            'F5 zum Neustarten',
+            {
+                fontSize: '18px',
+                fill: '#888888',
+                fontFamily: 'Arial, sans-serif',
+                align: 'center'
+            }
+        );
+        restartText.setOrigin(0.5);
+        restartText.setDepth(10001);
     }
 }

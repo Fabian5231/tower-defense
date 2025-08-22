@@ -50,9 +50,7 @@ export default class UISceneLeft extends Phaser.Scene {
                 this.hudPanel.updatePaused(isPaused);
             });
             
-            worldScene.events.on('hud:gameOver', (score) => {
-                this.showGameOver(score);
-            });
+            // Game over is now handled by WorldScene directly
         }
 
         // Handle resize events
@@ -74,61 +72,6 @@ export default class UISceneLeft extends Phaser.Scene {
         this.cameras.main.setBackgroundColor('#2c2c2c');
     }
 
-    showGameOver(score) {
-        // Create game over overlay
-        const bg = this.add.rectangle(
-            LEFT_W / 2, 
-            this.scale.height / 2, 
-            LEFT_W - 20, 
-            200, 
-            0x000000, 
-            0.9
-        );
-        bg.setStrokeStyle(3, 0xff0000);
-        bg.setDepth(10000);
-        
-        const gameOverText = this.add.text(
-            LEFT_W / 2, 
-            this.scale.height / 2 - 40,
-            '💀 GAME OVER 💀',
-            {
-                fontSize: '20px',
-                fill: '#ff0000',
-                fontFamily: 'Arial, sans-serif',
-                align: 'center'
-            }
-        );
-        gameOverText.setOrigin(0.5);
-        gameOverText.setDepth(10001);
-        
-        const scoreText = this.add.text(
-            LEFT_W / 2,
-            this.scale.height / 2,
-            `Endpunktzahl: ${score.toLocaleString()}`,
-            {
-                fontSize: '14px',
-                fill: '#ffffff',
-                fontFamily: 'Arial, sans-serif',
-                align: 'center'
-            }
-        );
-        scoreText.setOrigin(0.5);
-        scoreText.setDepth(10001);
-        
-        const restartText = this.add.text(
-            LEFT_W / 2,
-            this.scale.height / 2 + 30,
-            'F5 zum Neustarten',
-            {
-                fontSize: '12px',
-                fill: '#888888',
-                fontFamily: 'Arial, sans-serif',
-                align: 'center'
-            }
-        );
-        restartText.setOrigin(0.5);
-        restartText.setDepth(10001);
-    }
 
     destroy() {
         if (this.hudPanel) {

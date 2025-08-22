@@ -983,10 +983,20 @@ this.worldCam.setScroll(
     
     updateProjectiles(delta) {
         this.projectiles.forEach(projectile => {
-            if (projectile.target && !projectile.target.toRemove) {
-                projectile.targetX = projectile.target.x;
-                projectile.targetY = projectile.target.y;
+            // SOFORT entfernen wenn bereits als toRemove markiert
+            if (projectile.toRemove) {
+                return;
             }
+            
+            // Target-Validierung: Projektil entfernen wenn Target tot/weg ist
+            if (!projectile.target || projectile.target.toRemove) {
+                projectile.toRemove = true;
+                return;
+            }
+            
+            // Target-Position aktualisieren
+            projectile.targetX = projectile.target.x;
+            projectile.targetY = projectile.target.y;
             
             const direction = {
                 x: projectile.targetX - projectile.x,
@@ -994,32 +1004,38 @@ this.worldCam.setScroll(
             };
             const distance = Math.sqrt(direction.x * direction.x + direction.y * direction.y);
             
+            // Projektil hat Ziel erreicht (Treffer)
             if (distance < 8) {
                 projectile.toRemove = true;
                 
-                if (projectile.target && !projectile.target.toRemove) {
-                    // Check terrain-based accuracy modifier
-                    let hitChance = 1.0;
-                    if (this.terrainManager) {
-                        const targetGridX = Math.floor(projectile.target.x / this.gridSize);
-                        const targetGridY = Math.floor(projectile.target.y / this.gridSize);
-                        hitChance = this.terrainManager.getAccuracyModifier(targetGridX, targetGridY);
-                    }
+                // Check terrain-based accuracy modifier
+                let hitChance = 1.0;
+                if (this.terrainManager) {
+                    const targetGridX = Math.floor(projectile.target.x / this.gridSize);
+                    const targetGridY = Math.floor(projectile.target.y / this.gridSize);
+                    hitChance = this.terrainManager.getAccuracyModifier(targetGridX, targetGridY);
+                }
+                
+                // Roll for hit based on terrain
+                if (Math.random() <= hitChance) {
+                    const result = projectile.target.takeDamage(projectile.damage);
                     
-                    // Roll for hit based on terrain
-                    if (Math.random() <= hitChance) {
-                        const result = projectile.target.takeDamage(projectile.damage);
-                        
-                        if (result.killed) {
-                            this.score += result.score;
-                            this.currency += result.gold;
-                            this.updateHUD();
-                        }
+                    if (result.killed) {
+                        this.score += result.score;
+                        this.currency += result.gold;
+                        this.updateHUD();
                     }
                 }
                 return;
             }
             
+            // Sicherheitscheck: distance = 0 bedeutet keine Bewegung möglich
+            if (distance === 0) {
+                projectile.toRemove = true;
+                return;
+            }
+            
+            // Normale Projektilbewegung
             direction.x /= distance;
             direction.y /= distance;
             

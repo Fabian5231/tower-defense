@@ -381,6 +381,12 @@ export default class Enemy {
     }
     
     updateGraphics() {
+        // Velocity für Lead-Targeting berechnen
+        this.velocityX = this.x - this.previousX;
+        this.velocityY = this.y - this.previousY;
+        this.previousX = this.x;
+        this.previousY = this.y;
+        
         // Nur das Symbol positionieren (graphic ist jetzt symbolText)
         this.graphic.x = this.x;
         this.graphic.y = this.y;

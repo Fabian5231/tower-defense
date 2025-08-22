@@ -86,20 +86,14 @@ export default class Werfer {
     }
 
     update(time, enemies, gameSpeed = 1) {
-        // 2x gameSpeed => halbierte Fire-Rate => doppelt so oft schießen
         const effectiveFireRate = this.fireRate / (gameSpeed > 0 ? gameSpeed : 1);
 
         if (time - this.lastFired >= effectiveFireRate) {
             const target = this.findBestTarget(enemies);
             if (target) {
-                // SOFORTIGER SCHADEN beim Schuss
-                const result = this.dealDamageToTarget(target);
-                
-                // Visuelles Projektil erstellen
-                const projectile = this.createVisualProjectile(target);
+                const projectile = this.fireWithPrediction(target, gameSpeed);
                 this.lastFired = time;
-                
-                return { projectile, damageResult: result };
+                return projectile;
             }
         }
 
@@ -137,31 +131,39 @@ export default class Werfer {
         return bestTarget;
     }
 
-    dealDamageToTarget(target) {
-        // Terrain-basierte Genauigkeit prüfen
-        let hitChance = 1.0;
-        if (this.scene.terrainManager) {
-            const targetGridX = Math.floor(target.x / 30);
-            const targetGridY = Math.floor(target.y / 30);
-            hitChance = this.scene.terrainManager.getAccuracyModifier(targetGridX, targetGridY);
+    calculateLeadTarget(enemy, projectileSpeed, gameSpeed) {
+        const enemyX = enemy.x;
+        const enemyY = enemy.y;
+        const enemySpeedX = enemy.velocityX || 0;
+        const enemySpeedY = enemy.velocityY || 0;
+        
+        if (enemySpeedX === 0 && enemySpeedY === 0) {
+            return { x: enemyX, y: enemyY };
         }
         
-        if (Math.random() <= hitChance) {
-            return target.takeDamage(this.damage);
-        }
+        const dx = enemyX - this.x;
+        const dy = enemyY - this.y;
+        const distanceToEnemy = Math.sqrt(dx * dx + dy * dy);
+        const timeToReach = distanceToEnemy / (projectileSpeed * gameSpeed);
         
-        return { killed: false, score: 0, gold: 0 };
+        const predictedX = enemyX + (enemySpeedX * gameSpeed * timeToReach);
+        const predictedY = enemyY + (enemySpeedY * gameSpeed * timeToReach);
+        
+        return { x: predictedX, y: predictedY };
     }
     
-    createVisualProjectile(target) {
+    fireWithPrediction(target, gameSpeed) {
+        const projectileSpeed = 200;
+        const leadTarget = this.calculateLeadTarget(target, projectileSpeed, gameSpeed);
+        
         return {
             x: this.x,
             y: this.y,
-            targetX: target.x,
-            targetY: target.y,
-            speed: 300,
-            lifetime: 0.8, // Länger für Werfer (größere Projektile)
-            maxLifetime: 0.8,
+            targetX: leadTarget.x,
+            targetY: leadTarget.y,
+            target: target,
+            speed: projectileSpeed,
+            damage: this.damage,
             type: 'werfer',
             graphic: this.scene.add.circle(this.x, this.y, 6, 0xFF6600)
         };

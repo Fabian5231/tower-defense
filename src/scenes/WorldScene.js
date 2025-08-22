@@ -63,8 +63,8 @@ export default class WorldScene extends Phaser.Scene {
     }
     
     preload() {
-        this.load.image('pixel', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==');
-    }
+    this.load.image("grassTile", "src/assets/grassTile.png");
+}
     
     create() {
         const gameW = this.scale.width;
@@ -163,60 +163,16 @@ this.worldCam.setScroll(
     }
     
     createWorldBackground() {
-    const graphics = this.add.graphics();
+    const bg = this.add.tileSprite(
+        0, 0,
+        this.worldWidth, this.worldHeight,
+        "grassTile"
+    )
+    .setOrigin(0)
+    .setDepth(-1000);
 
-    // Base green background
-    graphics.fillStyle(0x2d5c2b, 1.0);
-    graphics.fillRect(0, 0, this.worldWidth, this.worldHeight);
-
-    // Add lighter green texture patches
-    const patchSize = 60;
-    const patches = Math.floor((this.worldWidth * this.worldHeight) / 6000);
-
-    for (let i = 0; i < patches; i++) {
-        const x = Math.random() * this.worldWidth;
-        const y = Math.random() * this.worldHeight;
-        const size = patchSize + Math.random() * 30 - 15;
-
-        const greenShades = [0x3a6b38, 0x2f5f2d, 0x426c40, 0x377d35];
-        const color = greenShades[Math.floor(Math.random() * greenShades.length)];
-
-        graphics.fillStyle(color, 0.6);
-        graphics.fillCircle(x, y, size);
-    }
-
-    // Add dirt patches
-    for (let i = 0; i < patches / 4; i++) {
-        const x = Math.random() * this.worldWidth;
-        const y = Math.random() * this.worldHeight;
-        const size = 20 + Math.random() * 15;
-
-        graphics.fillStyle(0x6b4423, 0.4);
-        graphics.fillCircle(x, y, size);
-    }
-
-    // Add small grass detail dots
-    for (let i = 0; i < patches * 1.5; i++) {
-        const x = Math.random() * this.worldWidth;
-        const y = Math.random() * this.worldHeight;
-        const size = 2 + Math.random() * 3;
-
-        graphics.fillStyle(0x4a7c48, 0.8);
-        graphics.fillCircle(x, y, size);
-    }
-
-    // 👉 In eine Textur rendern
-    graphics.generateTexture("background", this.worldWidth, this.worldHeight);
-
-    // Graphics-Objekt löschen (brauchen wir nicht mehr)
-    graphics.destroy();
-
-    // 👉 Als statisches Bild hinzufügen
-    this.add.image(0, 0, "background")
-        .setOrigin(0)   // oben links
-        .setDepth(-1000);
+    console.log("Background created:", bg.width, bg.height);
 }
-    
     
     
     recomputeMinZoom() {

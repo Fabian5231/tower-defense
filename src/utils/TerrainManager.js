@@ -221,19 +221,17 @@ export default class TerrainManager {
         case 'river':
             graphic = this.scene.add.rectangle(
                 x, y,
-                this.gridSize, this.gridSize,   // 👈 volle Größe
-                0x4682B4
+                this.gridSize, this.gridSize,
+                0x0066FF  // Vollständig blaue Flüsse
             );
-            graphic.setAlpha(0.7);
             break;
 
         case 'forest':
             graphic = this.scene.add.rectangle(
                 x, y,
-                this.gridSize, this.gridSize,   // 👈 volle Größe
-                0x228B22
+                this.gridSize, this.gridSize,
+                0x008800  // Vollständig grüne Wälder
             );
-            graphic.setAlpha(0.6);
             const treeSymbol = this.scene.add.text(x, y, '🌲', {
                 fontSize: '14px'
             }).setOrigin(0.5);

@@ -166,19 +166,31 @@ export default class Tower {
         this.healthBar.scaleX = this.health / this.maxHealth;
     }
 
-    showRange() {
+    showRange(isSelected = false) {
         if (this.rangeCircle) {
             this.rangeCircle.destroy();
         }
 
-        this.rangeCircle = this.scene.add.circle(
-            this.x,
-            this.y,
-            this.range,
-            0x00ff00,
-            0.1
-        );
-        this.rangeCircle.setStrokeStyle(2, 0x00ff00, 0.3);
+        // Highlight für ausgewähltes Gebäude
+        if (isSelected) {
+            this.rangeCircle = this.scene.add.circle(
+                this.x,
+                this.y,
+                this.range,
+                0x00ff00,
+                0.2  // Höhere Transparenz für ausgewähltes Gebäude
+            );
+            this.rangeCircle.setStrokeStyle(4, 0x00ff00, 0.8); // Dickerer, sichtbarerer Rahmen
+        } else {
+            this.rangeCircle = this.scene.add.circle(
+                this.x,
+                this.y,
+                this.range,
+                0x00ff00,
+                0.05  // Weniger sichtbar für nicht-ausgewählte Gebäude
+            );
+            this.rangeCircle.setStrokeStyle(1, 0x00ff00, 0.2); // Dünnerer Rahmen
+        }
 
         return this.rangeCircle;
     }

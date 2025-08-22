@@ -510,7 +510,9 @@ export default class TowerDefenseGame extends Phaser.Scene {
         this.clearAllTowerRanges();
         
         this.towers.forEach(tower => {
-            const rangeCircle = tower.showRange();
+            // Highlight ausgewähltes Gebäude
+            const isSelected = this.selectedBuilding === tower;
+            const rangeCircle = tower.showRange(isSelected);
             this.towerRangeCircles.push(rangeCircle);
         });
     }

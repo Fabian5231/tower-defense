@@ -87,10 +87,14 @@ export default class Tower {
         if (time - this.lastFired >= effectiveFireRate) {
             const target = this.findBestTarget(enemies);
             if (target) {
-                // Projektil mit Lead-Targeting erstellen
-                const projectile = this.fireWithPrediction(target, gameSpeed);
+                // SOFORTIGER SCHADEN beim Schuss (kein Warten auf Projektil-Treffer)
+                const result = this.dealDamageToTarget(target);
+                
+                // Visuelles Projektil erstellen
+                const projectile = this.createVisualProjectile(target);
                 this.lastFired = time;
-                return projectile;
+                
+                return { projectile, damageResult: result };
             }
         }
 
@@ -128,50 +132,32 @@ export default class Tower {
         return bestTarget;
     }
 
-    /**
-     * Berechnet wo sich der Gegner befinden wird wenn das Projektil ankommt
-     */
-    calculateLeadTarget(enemy, projectileSpeed, gameSpeed) {
-        // Aktuelle Position und Geschwindigkeit des Gegners
-        const enemyX = enemy.x;
-        const enemyY = enemy.y;
-        const enemySpeedX = enemy.velocityX || 0; // Geschwindigkeit in X-Richtung
-        const enemySpeedY = enemy.velocityY || 0; // Geschwindigkeit in Y-Richtung
-        
-        // Wenn Gegner keine Geschwindigkeit hat, direkt anvisieren
-        if (enemySpeedX === 0 && enemySpeedY === 0) {
-            return { x: enemyX, y: enemyY };
+    dealDamageToTarget(target) {
+        // Terrain-basierte Genauigkeit prüfen
+        let hitChance = 1.0;
+        if (this.scene.terrainManager) {
+            const targetGridX = Math.floor(target.x / 30); // gridSize
+            const targetGridY = Math.floor(target.y / 30);
+            hitChance = this.scene.terrainManager.getAccuracyModifier(targetGridX, targetGridY);
         }
         
-        // Entfernung zum Gegner
-        const dx = enemyX - this.x;
-        const dy = enemyY - this.y;
-        const distanceToEnemy = Math.sqrt(dx * dx + dy * dy);
+        // Treffer-Roll basierend auf Terrain
+        if (Math.random() <= hitChance) {
+            return target.takeDamage(this.damage);
+        }
         
-        // Zeit die das Projektil braucht um den Gegner zu erreichen
-        const timeToReach = distanceToEnemy / (projectileSpeed * gameSpeed);
-        
-        // Vorhergesagte Position basierend auf aktueller Bewegung
-        const predictedX = enemyX + (enemySpeedX * gameSpeed * timeToReach);
-        const predictedY = enemyY + (enemySpeedY * gameSpeed * timeToReach);
-        
-        return { x: predictedX, y: predictedY };
+        return { killed: false, score: 0, gold: 0 }; // Verfehlt
     }
     
-    fireWithPrediction(target, gameSpeed) {
-        const projectileSpeed = 300;
-        
-        // Berechne wo der Gegner sein wird
-        const leadTarget = this.calculateLeadTarget(target, projectileSpeed, gameSpeed);
-        
+    createVisualProjectile(target) {
         return {
             x: this.x,
             y: this.y,
-            targetX: leadTarget.x,
-            targetY: leadTarget.y,
-            target: target, // Original-Ziel für Schadens-Berechnung
-            speed: projectileSpeed,
-            damage: this.damage,
+            targetX: target.x,
+            targetY: target.y,
+            speed: 400, // Schneller für bessere Optik
+            lifetime: 0.6, // 0.6 Sekunden Lebensdauer
+            maxLifetime: 0.6,
             graphic: this.scene.add.circle(this.x, this.y, 3, 0xffff00)
         };
     }

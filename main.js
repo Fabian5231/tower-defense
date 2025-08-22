@@ -1,6 +1,7 @@
 import WorldScene from './src/scenes/WorldScene.js';
 import UISceneLeft from './src/scenes/UISceneLeft.js';
 import UISceneRight from './src/scenes/UISceneRight.js';
+import UIGameOver from "./src/scenes/UIGameOver.js";
 
 const config = {
     type: Phaser.AUTO,
@@ -8,7 +9,7 @@ const config = {
     height: 800,
     parent: 'game-container',
     backgroundColor: '#1e1e1e',
-    scene: [WorldScene, UISceneLeft, UISceneRight],
+    scene: [WorldScene, UISceneLeft, UISceneRight, UIGameOver],
     physics: {
         default: 'arcade'
     },

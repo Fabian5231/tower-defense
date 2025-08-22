@@ -11,8 +11,8 @@ import WaveManager from '../utils/WaveManager.js';
 import TerrainManager from '../utils/TerrainManager.js';
 import PathfindingManager from '../utils/PathfindingManager.js';
 
-export const LEFT_W = 220;
-export const RIGHT_W = 220;
+export const LEFT_W = 180;
+export const RIGHT_W = 180;
 
 export default class WorldScene extends Phaser.Scene {
     constructor() {
@@ -1080,10 +1080,13 @@ this.worldCam.setScroll(
     }
     
     gameOver() {
-        this.events.emit('hud:gameOver', this.score);
-        this.scene.pause();
-        this.showGameOverOverlay();
-    }
+    this.events.emit("hud:gameOver", this.score);
+    this.scene.pause();
+
+    // Neue GameOver-UI starten
+    this.scene.launch("ui-gameover", { score: this.score });
+    this.scene.bringToTop("ui-gameover");
+}
     
     showGameOverOverlay() {
         // Create dark overlay over entire world scene

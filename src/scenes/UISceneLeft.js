@@ -1,6 +1,6 @@
 import HUDPanel from '../ui/HUDPanel.js';
 
-export const LEFT_W = 220;
+export const LEFT_W = 250;
 
 export default class UISceneLeft extends Phaser.Scene {
     constructor() {

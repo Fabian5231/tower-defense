@@ -13,13 +13,13 @@ export default class Werfer {
         this.level = 1;
         this.type = "werfer";
 
-        // Level-basierte Stats definieren (höhere Werte als Tower)
+        // Level-basierte Stats definieren (erhöhter Schaden und massive Reichweite)
         this.levelStats = {
-            1: { damage: 60, range: 200, health: 100 }, // MASSIVE Range & hoher Schaden
-            2: { damage: 90, range: 250, health: 140 },
-            3: { damage: 120, range: 300, health: 180 },
-            4: { damage: 160, range: 350, health: 230 },
-            5: { damage: 200, range: 400, health: 280 }
+            1: { damage: 100, range: 200, health: 100 }, // MASSIVE Range & erhöhter Schaden
+            2: { damage: 150, range: 250, health: 140 },
+            3: { damage: 200, range: 300, health: 180 },
+            4: { damage: 260, range: 350, health: 230 },
+            5: { damage: 330, range: 400, health: 280 }
         };
 
         // Langsamere Fire-Rate als Tower (da stärker)

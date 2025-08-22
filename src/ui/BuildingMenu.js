@@ -26,7 +26,16 @@ export default class BuildingMenu {
                 width: 1,
                 height: 1,
                 maxLevel: 5,
-                range: 80 // Direkte Range-Angabe (Level 1)
+                range: 120 // Erhöhte Range (Level 1)
+            },
+            kanone: {
+                cost: 20,
+                name: "Kanone",
+                symbol: "🔫",
+                width: 1,
+                height: 1,
+                maxLevel: 5,
+                range: 50 // Kurze Reichweite für hohen Schaden
             },
             werfer: {
                 cost: 50,

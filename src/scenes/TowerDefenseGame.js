@@ -1,5 +1,6 @@
 import Enemy from '../entities/Enemy.js';
 import Tower from '../entities/Tower.js';
+import Kanone from '../entities/Kanone.js';
 import Werfer from '../entities/Werfer.js';
 import Farm from '../entities/Farm.js';
 import Factory from '../entities/Factory.js';
@@ -306,6 +307,10 @@ export default class TowerDefenseGame extends Phaser.Scene {
             case 'tower':
                 newBuilding = new Tower(this, x, y, gridPos, rotation);
                 this.towers.push(newBuilding);
+                break;
+            case 'kanone':
+                newBuilding = new Kanone(this, x, y, gridPos, rotation);
+                this.towers.push(newBuilding); // Kanone sind auch "towers" für das Targeting-System
                 break;
             case 'werfer':
                 newBuilding = new Werfer(this, x, y, gridPos, rotation);

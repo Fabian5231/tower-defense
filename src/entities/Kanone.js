@@ -1,4 +1,4 @@
-export default class Tower {
+export default class Kanone {
     constructor(scene, x, y, gridPos, rotation = 0) {
         this.scene = scene;
         this.x = x;
@@ -9,21 +9,21 @@ export default class Tower {
         this.gridHeight = 1;
         this.rotation = rotation;
 
-        // Tower Level
+        // Kanone Level
         this.level = 1;
-        this.type = "tower";
+        this.type = "kanone";
 
-        // Level-basierten Stats definieren (erhöhte Reichweite)
+        // Level-basierte Stats definieren (hoher Schaden, kurze Reichweite)
         this.levelStats = {
-            1: { damage: 25, range: 120, health: 75 },
-            2: { damage: 40, range: 150, health: 100 },
-            3: { damage: 55, range: 180, health: 125 },
-            4: { damage: 75, range: 210, health: 150 },
-            5: { damage: 100, range: 240, health: 200 }
+            1: { damage: 150, range: 50, health: 80 }, // Sehr hoher Schaden, sehr kurze Reichweite
+            2: { damage: 200, range: 60, health: 100 },
+            3: { damage: 250, range: 70, health: 120 },
+            4: { damage: 300, range: 80, health: 140 },
+            5: { damage: 400, range: 90, health: 180 }
         };
 
-        // Fire-Rate bleibt gleich für alle Level
-        this.fireRate = 300; // ms
+        // Mittlere Fire-Rate (zwischen Tower und Werfer)
+        this.fireRate = 500; // ms
         this.lastFired = 0;
 
         // Flags
@@ -49,15 +49,20 @@ export default class Tower {
     createGraphics() {
         const displaySize = 30; // gridSize
 
-        // Main tower graphic
+        // Main kanone graphic (grau-metallisch)
         this.graphic = this.scene.add.rectangle(
             this.x,
             this.y,
             displaySize,
             displaySize,
-            0x00ff00
+            0x708090 // Slate Gray für Kanone
         );
-        this.graphic.setStrokeStyle(2, 0x00aa00);
+        this.graphic.setStrokeStyle(2, 0x2F4F4F); // Dark Slate Gray Rand
+
+        // Kanonen-Symbol
+        this.symbol = this.scene.add.text(this.x, this.y, '🔫', { 
+            fontSize: '16px' 
+        }).setOrigin(0.5);
 
         // Health bars
         this.healthBarBg = this.scene.add.rectangle(
@@ -81,21 +86,21 @@ export default class Tower {
     }
 
     update(time, enemies, gameSpeed = 1) {
-  // 2x gameSpeed => halbierte Fire-Rate => doppelt so oft schießen
-  const effectiveFireRate =
-    this.fireRate / (gameSpeed > 0 ? gameSpeed : 1);
+        // 2x gameSpeed => halbierte Fire-Rate => doppelt so oft schießen
+        const effectiveFireRate =
+            this.fireRate / (gameSpeed > 0 ? gameSpeed : 1);
 
-  if (time - this.lastFired >= effectiveFireRate) {
-    const target = this.findBestTarget(enemies);
-    if (target) {
-      const projectile = this.fire(target);
-      this.lastFired = time;
-      return projectile;
+        if (time - this.lastFired >= effectiveFireRate) {
+            const target = this.findBestTarget(enemies);
+            if (target) {
+                const projectile = this.fire(target);
+                this.lastFired = time;
+                return projectile;
+            }
+        }
+
+        return null;
     }
-  }
-
-  return null;
-}
 
     findBestTarget(enemies) {
         let bestTarget = null;
@@ -103,13 +108,13 @@ export default class Tower {
 
         enemies.forEach((enemy) => {
             // Check if enemy is in range
-            const distanceToTower = Math.sqrt(
+            const distanceToKanone = Math.sqrt(
                 (enemy.x - this.x) * (enemy.x - this.x) +
                     (enemy.y - this.y) * (enemy.y - this.y)
             );
 
-            if (distanceToTower <= this.range) {
-                // Calculate distance from enemy to town hall (assuming center at 600, 400)
+            if (distanceToKanone <= this.range) {
+                // Calculate distance from enemy to town hall
                 const townHallX = 600,
                     townHallY = 400;
                 const distanceToTownHall = Math.sqrt(
@@ -135,9 +140,10 @@ export default class Tower {
             targetX: target.x,
             targetY: target.y,
             target: target, // Reference for guaranteed hit
-            speed: 300,
+            speed: 400, // Schneller als Werfer
             damage: this.damage,
-            graphic: this.scene.add.circle(this.x, this.y, 3, 0xffff00)
+            type: 'kanone', // Markierung für Kanonen-Projektile
+            graphic: this.scene.add.circle(this.x, this.y, 4, 0x708090) // Graues, mittelgroßes Projektil
         };
     }
 
@@ -175,10 +181,10 @@ export default class Tower {
             this.x,
             this.y,
             this.range,
-            0x00ff00,
+            0x708090, // Grau für Kanonen-Range
             0.1
         );
-        this.rangeCircle.setStrokeStyle(2, 0x00ff00, 0.3);
+        this.rangeCircle.setStrokeStyle(2, 0x708090, 0.3);
 
         return this.rangeCircle;
     }
@@ -192,6 +198,7 @@ export default class Tower {
 
     destroy() {
         this.graphic.destroy();
+        this.symbol.destroy();
         this.healthBarBg.destroy();
         this.healthBar.destroy();
         if (this.rangeCircle) {

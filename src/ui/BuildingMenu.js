@@ -123,7 +123,7 @@ createButton(x, y, _w, _h, label, cost, onClick) {
 
   const labelText = this.scene.add
     .text(x - this.layout.buttonWidth / 2 + 10, y, label, {
-      fontSize: "14px",
+      fontSize: "16px",
       fill: "#fff"
     })
     .setOrigin(0, 0.5)
@@ -131,7 +131,7 @@ createButton(x, y, _w, _h, label, cost, onClick) {
 
   const costText = this.scene.add
     .text(x + this.layout.buttonWidth / 2 - 10, y, cost, {
-      fontSize: "12px",
+      fontSize: "14px",
       fill: "#ffd700"
     })
     .setOrigin(1, 0.5)
@@ -241,7 +241,7 @@ createButton(x, y, _w, _h, label, cost, onClick) {
 
         const buttonText = this.scene.add
             .text(x, y, text, {
-                fontSize: "14px",
+                fontSize: "16px",
                 fill: "#fff"
             })
             .setOrigin(0.5)
@@ -304,7 +304,7 @@ createSimpleButton(x, y, _w, _h, text, onClick, id = null) {
 
   const buttonText = this.scene.add
     .text(x, y, text, {
-      fontSize: "14px",
+      fontSize: "16px",
       fill: "#fff"
     })
     .setOrigin(0.5)

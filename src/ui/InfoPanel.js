@@ -18,7 +18,7 @@ export default class InfoPanel {
         const infoText = this.generateInfoText(building);
         
         this.elements.infoPanel = this.scene.add.text(building.x + 50, building.y - 50, infoText, {
-            fontSize: '12px',
+            fontSize: '14px',
             fill: '#fff',
             backgroundColor: '#000000',
             padding: { x: 10, y: 8 }
@@ -96,7 +96,7 @@ export default class InfoPanel {
             this.elements.upgradeButton.setOrigin(0, 0.5);
             
             this.elements.upgradeButtonText = this.scene.add.text(building.x + 110, buttonY, `⬆️ Upgrade (${upgradeCost}B)`, {
-                fontSize: '10px',
+                fontSize: '12px',
                 fill: '#fff'
             }).setOrigin(0.5, 0.5);
             
@@ -118,7 +118,7 @@ export default class InfoPanel {
         } else {
             // Max level indicator
             this.elements.upgradeButtonText = this.scene.add.text(building.x + 50, buttonY, '✨ Max Level', {
-                fontSize: '10px',
+                fontSize: '12px',
                 fill: '#ffd700'
             }).setOrigin(0, 0.5);
 

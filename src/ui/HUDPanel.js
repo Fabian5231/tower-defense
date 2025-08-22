@@ -36,7 +36,7 @@ export default class HUDPanel {
             x + 8, 
             cy, 
             "#ffffff", 
-            18
+            22
         );
         cy += line * 1.5;
 
@@ -78,7 +78,7 @@ export default class HUDPanel {
         this.texts.paused = this.addLine("", x + 8, cy, "#fd7e14");
     }
 
-    addLine(text, x, y, color = "#fff", size = 14) {
+    addLine(text, x, y, color = "#fff", size = 16) {
         const textElement = this.scene.add
             .text(x, y, text, { 
                 fontSize: `${size}px`, 

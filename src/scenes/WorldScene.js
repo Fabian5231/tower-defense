@@ -1,5 +1,6 @@
 import Enemy from '../entities/Enemy.js';
 import Tower from '../entities/Tower.js';
+import Kanone from '../entities/Kanone.js';
 import Werfer from '../entities/Werfer.js';
 import Farm from '../entities/Farm.js';
 import Factory from '../entities/Factory.js';
@@ -573,6 +574,10 @@ this.worldCam.setScroll(
                 newBuilding = new Tower(this, x, y, gridPos, rotation);
                 this.towers.push(newBuilding);
                 break;
+            case 'kanone':
+                newBuilding = new Kanone(this, x, y, gridPos, rotation);
+                this.towers.push(newBuilding);
+                break;
             case 'werfer':
                 newBuilding = new Werfer(this, x, y, gridPos, rotation);
                 this.towers.push(newBuilding);
@@ -622,7 +627,7 @@ this.worldCam.setScroll(
                 (building) => this.destroyBuilding(building)
             );
             
-            if (clickedBuilding.type === 'tower' || clickedBuilding.type === 'werfer') {
+            if (clickedBuilding.type === 'tower' || clickedBuilding.type === 'kanone' || clickedBuilding.type === 'werfer') {
                 this.showAllTowerRanges();
             }
         } else {
@@ -741,7 +746,7 @@ this.worldCam.setScroll(
         this.gridManager.freeGridArea(building.gridX, building.gridY, building.gridWidth, building.gridHeight);
         
         // Remove from towers array if it's a combat building
-        if (building.type === 'tower' || building.type === 'werfer') {
+        if (building.type === 'tower' || building.type === 'kanone' || building.type === 'werfer') {
             this.towers = this.towers.filter(tower => tower !== building);
         }
         

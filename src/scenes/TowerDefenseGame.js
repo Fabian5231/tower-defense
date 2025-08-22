@@ -361,7 +361,7 @@ export default class TowerDefenseGame extends Phaser.Scene {
                 (building) => this.destroyBuilding(building)
             );
             
-            if (clickedBuilding.type === 'tower' || clickedBuilding.type === 'werfer') {
+            if (clickedBuilding.type === 'tower' || clickedBuilding.type === 'kanone' || clickedBuilding.type === 'werfer') {
                 this.showAllTowerRanges();
             }
         } else {
@@ -464,7 +464,7 @@ export default class TowerDefenseGame extends Phaser.Scene {
         this.gridManager.freeGridArea(building.gridX, building.gridY, building.gridWidth, building.gridHeight);
         
         // Remove from towers array if it's a combat building
-        if (building.type === 'tower' || building.type === 'werfer') {
+        if (building.type === 'tower' || building.type === 'kanone' || building.type === 'werfer') {
             this.towers = this.towers.filter(tower => tower !== building);
         }
         

@@ -34,6 +34,16 @@ export default class TerrainManager {
         this.renderTerrain();
     }
     
+    // Hilfsfunktion: Prüft ob Position in Town Hall Schutzzone liegt
+    isInTownHallProtectionZone(x, y) {
+        const townHallGridX = Math.floor(this.mapWidth / 2 / this.gridSize);
+        const townHallGridY = Math.floor(this.mapHeight / 2 / this.gridSize);
+        const minDistanceToTownHall = 5; // 2-Kachel-Radius + Town Hall (3x3) = 5
+        
+        const distanceToTownHall = Math.hypot(x - townHallGridX, y - townHallGridY);
+        return distanceToTownHall <= minDistanceToTownHall;
+    }
+    
     generateMountains() {
   const cols = Math.floor(this.mapWidth / this.gridSize);
   const rows = Math.floor(this.mapHeight / this.gridSize);
@@ -42,15 +52,8 @@ export default class TerrainManager {
   const size = 3; // feste 9x9-Berge
   if (cols < size || rows < size) return;
 
-  // Anzahl Berg-Cluster (wie vorher 3–5)
+  // Anzahl Berg-Cluster (3–5)
   const mountainCount = 3 + Math.floor(Math.random() * 3);
-
-  // Townhall-Position im Grid
-  const townHallGridX = Math.floor(this.mapWidth / 2 / this.gridSize);
-  const townHallGridY = Math.floor(this.mapHeight / 2 / this.gridSize);
-
-  // Mindestabstand (wie vorher, in Tiles)
-  const minDistanceToTownHall = 3;
 
   for (let i = 0; i < mountainCount; i++) {
     let placed = false;
@@ -64,14 +67,13 @@ export default class TerrainManager {
       const topLeftX = Math.floor(Math.random() * (cols - size + 1));
       const topLeftY = Math.floor(Math.random() * (rows - size + 1));
 
-      // Prüfen: Berührt der 9x9-Block den Mindestabstand zur Townhall?
+      // Prüfen: Berührt der 9x9-Block die Town Hall Schutzzone?
       let tooClose = false;
       for (let dy = 0; dy < size && !tooClose; dy++) {
         for (let dx = 0; dx < size; dx++) {
           const x = topLeftX + dx;
           const y = topLeftY + dy;
-          const d = Math.hypot(x - townHallGridX, y - townHallGridY);
-          if (d <= minDistanceToTownHall) {
+          if (this.isInTownHallProtectionZone(x, y)) {
             tooClose = true;
             break;
           }
@@ -140,7 +142,8 @@ export default class TerrainManager {
                     
                     if (riverX >= 0 && riverX < this.terrainGrid[0].length && 
                         riverY >= 0 && riverY < this.terrainGrid.length && 
-                        this.terrainGrid[riverY][riverX] !== 'mountain') {
+                        this.terrainGrid[riverY][riverX] !== 'mountain' &&
+                        !this.isInTownHallProtectionZone(riverX, riverY)) {
                         this.terrainGrid[riverY][riverX] = 'river';
                     }
                 }
@@ -167,7 +170,8 @@ export default class TerrainManager {
                     const distance = Math.sqrt(dx * dx + dy * dy);
                     
                     if (x >= 0 && x < cols && y >= 0 && y < rows && 
-                        distance <= size && Math.random() > 0.4) {
+                        distance <= size && Math.random() > 0.4 &&
+                        !this.isInTownHallProtectionZone(x, y)) {
                         
                         if (this.terrainGrid[y][x] === 'grass') {
                             this.terrainGrid[y][x] = 'forest';

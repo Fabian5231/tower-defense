@@ -1,0 +1,227 @@
+================================================================================
+                          TOWER DEFENSE SPIEL - DOKUMENTATION
+                              Alle Spielobjekte und Stats
+================================================================================
+
+🏯 VERTEIDIGUNGSGEBÄUDE - KAMPF-EINHEITEN
+================================================================================
+
+🏯 TURM (Tower)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Kosten: 10 Batzen
+Größe: 1x1 Felder
+Feuerrate: 300ms (schnellste Einheit)
+Symbol: 🏯
+
+LEVEL-PROGRESSION:
+Level 1: Schaden: 25    | Reichweite: 180  | HP: 75
+Level 2: Schaden: 40    | Reichweite: 220  | HP: 100
+Level 3: Schaden: 55    | Reichweite: 260  | HP: 125
+Level 4: Schaden: 75    | Reichweite: 300  | HP: 150
+Level 5: Schaden: 100   | Reichweite: 350  | HP: 200
+
+ROLLE: Günstiger Allrounder mit guter Reichweite und schneller Feuerrate
+
+
+🔫 KANONE (Kanone)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Kosten: 20 Batzen  
+Größe: 1x1 Felder
+Feuerrate: 500ms (mittlere Geschwindigkeit)
+Symbol: 🔫
+
+LEVEL-PROGRESSION:
+Level 1: Schaden: 150   | Reichweite: 90   | HP: 80
+Level 2: Schaden: 200   | Reichweite: 110  | HP: 100
+Level 3: Schaden: 250   | Reichweite: 130  | HP: 120
+Level 4: Schaden: 300   | Reichweite: 150  | HP: 140
+Level 5: Schaden: 400   | Reichweite: 180  | HP: 180
+
+ROLLE: Schwerer Schaden-Dealer für mittlere Distanzen
+
+
+💥 WERFER (Werfer)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Kosten: 50 Batzen (teuerste Kampfeinheit)
+Größe: 1x1 Felder
+Feuerrate: 800ms (langsamste, aber stärkste)
+Symbol: 💥
+
+LEVEL-PROGRESSION:
+Level 1: Schaden: 100   | Reichweite: 300  | HP: 100
+Level 2: Schaden: 150   | Reichweite: 370  | HP: 140
+Level 3: Schaden: 200   | Reichweite: 440  | HP: 180
+Level 4: Schaden: 260   | Reichweite: 520  | HP: 230
+Level 5: Schaden: 330   | Reichweite: 600  | HP: 280
+
+ROLLE: Langstrecken-Artillerie mit extremer Reichweite
+
+
+💰 WIRTSCHAFTSGEBÄUDE - RESSOURCEN-PRODUKTION
+================================================================================
+
+🌾 FELD (Farm)  
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Kosten: 10 Batzen
+Größe: 1x2 Felder (kann rotiert werden → 2x1)
+Basis-Produktion: 5 Batzen alle 30 Sekunden
+Symbol: 🌾
+
+LEVEL-PROGRESSION:
+Level 1: +5 Batzen   | alle 30.0s | HP: 100
+Level 2: +8 Batzen   | alle 25.0s | HP: 125  
+Level 3: +11 Batzen  | alle 20.0s | HP: 150
+Level 4: +14 Batzen  | alle 15.0s | HP: 175
+Level 5: +17 Batzen  | alle 10.0s | HP: 200
+
+BESONDERHEIT: 
+- Kann Fabriken beliefern (dann keine direkte Goldproduktion)
+- Formel: Produktion = 5 + (Level-1) × 3 Batzen
+- Formel: Rate = max(10s, 30s - (Level-1) × 5s)
+
+
+🏭 FABRIK (Factory)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Kosten: 10 Batzen
+Größe: 2x1 Felder (kann rotiert werden → 1x2)  
+Basis-Produktion: Abhängig von benachbarten Lieferanten
+Produktions-Rate: 30 Sekunden (wie Feld)
+Symbol: 🏭
+
+MECHANIK:
+- Produziert NICHTS ohne benachbarte Felder/Minen
+- Scannt alle 8 benachbarten Felder nach Lieferanten
+- Felder/Minen, die Fabrik beliefern, produzieren kein direktes Gold
+
+PRODUKTIONS-FORMEL:
+Fabrik-Produktion = Σ(Lieferant-Produktion × Level-Multiplier)
+Level-Multiplier = 1.5 + (Fabrik-Level - 1) × 0.3
+
+BEISPIEL Level-3-Fabrik mit Level-2-Feld (8 Batzen):
+→ Fabrik produziert: 8 × 2.1 = 16.8 → 16 Batzen alle 30s
+
+
+⛏️ MINE (Mine)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Kosten: 30 Batzen (teuerste Wirtschaftseinheit)
+Größe: 1x1 Felder
+Basis-Produktion: 50 Batzen alle 60 Sekunden
+Symbol: ⛏️
+
+LEVEL-PROGRESSION:
+Level 1: +50 Batzen   | alle 60.0s | HP: 120
+Level 2: +70 Batzen   | alle 52.5s | HP: 150
+Level 3: +90 Batzen   | alle 45.0s | HP: 180
+Level 4: +110 Batzen  | alle 37.5s | HP: 210
+Level 5: +130 Batzen  | alle 30.0s | HP: 240
+
+BESONDERHEIT:
+- MUSS neben einem Berg stehen (alle 8 angrenzenden Felder werden geprüft)
+- Produziert NICHTS ohne Berg-Kontakt
+- Kann Fabriken beliefern (dann keine direkte Goldproduktion)
+- Formel: Produktion = 50 + (Level-1) × 20 Batzen
+- Formel: Rate = max(30s, 60s - (Level-1) × 7.5s)
+
+
+👹 GEGNER - FEINDLICHE EINHEITEN
+================================================================================
+
+👹 STANDARD GEGNER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Standard-Leben: 50 HP
+Standard-Geschwindigkeit: 50 Pixel/Sekunde  
+Standard-Belohnung: 5 Batzen
+Größe: 20×20 Pixel
+Farbe: Rot (0xff0000)
+
+VERHALTEN:
+- Bewegen sich zum Rathaus (Zentrum der Karte)
+- Verursachen 10 Schaden am Rathaus bei Kontakt
+- Nutzen terrain-bewusstes Movement (umgehen Hindernisse)
+- Spawn alle paar Sekunden in Wellen
+
+
+👑 BOSS GEGNER  
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Variable Leben: Höher als Standard-Gegner
+Variable Geschwindigkeit: Meist langsamer aber robuster
+Variable Belohnung: Mehr als 5 Batzen  
+Größe: 35×35 Pixel (größer als normale Gegner)
+Farbe: Lila (0x800080)
+Symbol: 👑 (Krone)
+
+BESONDERHEITEN:
+- Gelber Rahmen zur Hervorhebung
+- Erscheinen seltener, aber deutlich stärker
+- Höhere Belohnung beim Eliminieren
+
+
+🏛️ ZENTRALE GEBÄUDE 
+================================================================================
+
+🏛️ RATHAUS (Town Hall)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Leben: 100 HP
+Position: Zentrum der Karte (1250, 1000 in der 2500×2000 Welt)
+Radius: ~30 Pixel Kollisions-Zone
+
+FUNKTION:
+- Hauptziel aller Gegner
+- Spielende bei 0 HP
+- Kann nicht bewegt oder aufgerüstet werden
+
+
+⚙️ SYSTEM-MECHANIKEN
+================================================================================
+
+💰 WIRTSCHAFTS-SYSTEM:
+- Start-Kapital: 60 Batzen
+- Upgrade-Kosten: Grundkosten × (Level + 1) × 1.5
+- Zerstörungs-Rückerstattung: 50% der Gesamtinvestition
+
+🔧 UPGRADE-SYSTEM:
+- Alle Gebäude: Max Level 5
+- Upgrades verbessern: Schaden, Reichweite, HP, Produktion, Rate
+- Sofortige Voll-Heilung bei Upgrade
+
+⚡ SPIEL-GESCHWINDIGKEIT:
+- Verfügbare Geschwindigkeiten: 0.5x, 1.0x, 2.0x, 3.0x
+- Beeinflusst: Feuerrate, Produktionsrate, Gegnerbewegung
+- Pause-Funktion verfügbar
+
+🎮 STEUERUNG:
+- WASD: Kamera-Bewegung
+- R: Gebäude vor Platzierung rotieren  
+- Mausrad: Zoom (0.1x - 2.5x)
+- Linksklick: Gebäude platzieren/auswählen
+- Rechtsklick: Auswahl aufheben
+
+🗺️ WELT-EIGENSCHAFTEN:
+- Welt-Größe: 2500×2000 Pixel
+- Grid-Größe: 30×30 Pixel pro Feld
+- Terrain: Berge (für Minen), freie Flächen
+- Kamera: Vollständig scrollbar mit Zoom
+
+================================================================================
+                              STRATEGIE-TIPPS
+================================================================================
+
+💡 FRÜHE PHASE:
+1. Baue 2-3 Felder für stabile Einkommensquelle
+2. Platziere Türme entlang der Gegnerpfade
+3. Spare für erste Kanone (hoher Schaden)
+
+💡 MITTLERE PHASE:  
+4. Baue Minen neben Bergen für höheres Einkommen
+5. Upgrade Türme für bessere Reichweite
+6. Erste Werfer für Langstrecken-Abdeckung
+
+💡 SPÄTE PHASE:
+7. Fabriken mit mehreren Lieferanten für maximalen Output
+8. Level 5 Werfer für extreme Reichweiten-Dominanz
+9. Strategische Kanonen-Platzierung für Boss-Gegner
+
+================================================================================
+                          Letzte Aktualisierung: 2025
+                    Alle Werte entsprechen der aktuellen Version
+================================================================================

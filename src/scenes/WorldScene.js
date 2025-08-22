@@ -63,8 +63,9 @@ export default class WorldScene extends Phaser.Scene {
     }
     
     preload() {
-    this.load.image("grassTile", "src/assets/grassTile.png");
-}
+        this.load.image("grassTile", "src/assets/grassTile.png");
+        this.load.image("waterTile", "src/assets/waterTile.png");
+    }
     
     create() {
         const gameW = this.scale.width;

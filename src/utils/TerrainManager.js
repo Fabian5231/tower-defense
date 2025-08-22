@@ -219,11 +219,24 @@ export default class TerrainManager {
             break;
 
         case 'river':
-            graphic = this.scene.add.rectangle(
+            // Wasser-Textur als Basis
+            const waterImage = this.scene.add.image(x, y, 'waterTile');
+            waterImage.setDisplaySize(this.gridSize, this.gridSize);
+            waterImage.setDepth(-11);
+            this.terrainGraphics.push(waterImage);
+            
+            // Halbtransparentes blaues Overlay für Wasser-Effekt
+            const waterOverlay = this.scene.add.rectangle(
                 x, y,
                 this.gridSize, this.gridSize,
-                0x0066FF  // Vollständig blaue Flüsse
+                0x0066FF
             );
+            waterOverlay.setAlpha(0.3);
+            waterOverlay.setDepth(-10);
+            this.terrainGraphics.push(waterOverlay);
+            
+            // Kein graphic = null, da wir beide Objekte bereits gespeichert haben
+            graphic = null;
             break;
 
         case 'forest':

@@ -34,8 +34,8 @@ export default class WorldScene extends Phaser.Scene {
         this.currentSpeedIndex = 1;
         
         // World properties (actual map size)
-        this.worldWidth = 2000;  // Expanded world size
-        this.worldHeight = 1500; // Expanded world size
+        this.worldWidth = 2500;  // Expanded world size
+        this.worldHeight = 2000; // Expanded world size
         this.mapCenter = { x: this.worldWidth / 2, y: this.worldHeight / 2 };
         this.gridSize = 30;
         
@@ -75,7 +75,8 @@ export default class WorldScene extends Phaser.Scene {
         this.worldCam = this.cameras.main;
         
         // Setup camera bounds for the expanded world (like old version)
-        this.worldCam.setBounds(-200, -200, this.worldWidth + 400, this.worldHeight + 400);
+        // Exakte Bounds: Kamera darf nur innerhalb der Welt scrollen
+this.worldCam.setBounds(0, 0, this.worldWidth, this.worldHeight);
         
         // minZoom korrekt aus Viewport vs. Welt berechnen
         this.recomputeMinZoom();
@@ -101,6 +102,12 @@ export default class WorldScene extends Phaser.Scene {
         
         // Create town hall
         this.createTownHall();
+
+// Kamera auf Rathaus zentrieren (mit aktuellem Zoom)
+this.worldCam.setScroll(
+    this.townHall.x - this.worldCam.width / (2 * this.worldCam.zoom),
+    this.townHall.y - this.worldCam.height / (2 * this.worldCam.zoom)
+);
         
         // Initialize first wave
         this.waveManager.enemiesInWave = this.waveManager.getWaveEnemyCount(this.waveManager.currentWave);
@@ -205,23 +212,22 @@ export default class WorldScene extends Phaser.Scene {
     }
     
     clampCameraToBounds() {
-        const cam = this.cameras.main;
-        
-        // Behalte ggf. deine Sicherheitsränder
-        const minX = -200;
-        const minY = -200;
-        const maxX = this.worldWidth + 200;
-        const maxY = this.worldHeight + 200;
-        
-        const viewW = cam.width / cam.zoom;
-        const viewH = cam.height / cam.zoom;
-        
-        const maxScrollX = maxX - viewW;
-        const maxScrollY = maxY - viewH;
-        
-        cam.scrollX = Phaser.Math.Clamp(cam.scrollX, minX, Math.max(minX, maxScrollX));
-        cam.scrollY = Phaser.Math.Clamp(cam.scrollY, minY, Math.max(minY, maxScrollY));
-    }
+    const cam = this.cameras.main;
+
+    const minX = 0;
+    const minY = 0;
+    const maxX = this.worldWidth;
+    const maxY = this.worldHeight;
+
+    const viewW = cam.width / cam.zoom;
+    const viewH = cam.height / cam.zoom;
+
+    const maxScrollX = maxX - viewW;
+    const maxScrollY = maxY - viewH;
+
+    cam.scrollX = Phaser.Math.Clamp(cam.scrollX, minX, maxScrollX);
+    cam.scrollY = Phaser.Math.Clamp(cam.scrollY, minY, maxScrollY);
+}
 
     initZoomInput() {
         // Mouse wheel zoom (auf Mausposition verankert und geclamped)

@@ -31,38 +31,36 @@ export default class Enemy {
     }
     
     createGraphics() {
-        // Main enemy graphic
-        this.graphic = this.scene.add.rectangle(this.x, this.y, this.size, this.size, this.color);
-        
-        // Typ-spezifische Symbole hinzufügen
+        // Nur das Symbol als Hauptgrafik (kein Rechteck mehr)
         this.symbolText = this.scene.add.text(this.x, this.y, this.symbol, {
-            fontSize: this.isBoss ? '20px' : '12px',
+            fontSize: this.isBoss ? '24px' : '18px',
             align: 'center'
         }).setOrigin(0.5);
         
-        // Health bars
+        // Referenz für Kompatibilität (symbolText fungiert als graphic)
+        this.graphic = this.symbolText;
+        
+        // Health bars (angepasst für Symbol-basierte Darstellung)
+        const healthBarY = this.y - 15; // Fixe Position über Symbol
+        const healthBarWidth = this.isBoss ? 30 : 20;
+        
         this.healthBarBg = this.scene.add.rectangle(
             this.x, 
-            this.y - (this.size/2 + 10), 
-            this.size + 2, 
+            healthBarY, 
+            healthBarWidth + 2, 
             6, 
             0x666666
         );
         this.healthBar = this.scene.add.rectangle(
             this.x, 
-            this.y - (this.size/2 + 10), 
-            this.size, 
+            healthBarY, 
+            healthBarWidth, 
             4, 
             0x00ff00
         );
         
-        // Boss specific graphics
-        if (this.isBoss) {
-            this.graphic.setStrokeStyle(3, 0xffff00); // Yellow outline for boss
-            this.bossSymbol = this.scene.add.text(this.x, this.y, '👑', { 
-                fontSize: '16px' 
-            }).setOrigin(0.5);
-        }
+        // Boss-spezifische Hervorhebung durch größere Schrift (schon oben gesetzt)
+        // Kein extra Crown-Symbol mehr nötig, da Boss-Symbole bereits eindeutig sind
         
         // Hide health bars initially
         this.healthBarBg.setVisible(false);
@@ -383,10 +381,9 @@ export default class Enemy {
     }
     
     updateGraphics() {
+        // Nur das Symbol positionieren (graphic ist jetzt symbolText)
         this.graphic.x = this.x;
         this.graphic.y = this.y;
-        this.symbolText.x = this.x;
-        this.symbolText.y = this.y;
         this.healthBarBg.x = this.x;
         this.healthBarBg.y = this.y - (this.isBoss ? 25 : 15);
         this.healthBar.x = this.x;
@@ -427,12 +424,9 @@ export default class Enemy {
     }
     
     destroy() {
-        this.graphic.destroy();
-        this.symbolText.destroy();
+        this.graphic.destroy(); // symbolText wird zerstört
         this.healthBarBg.destroy();
         this.healthBar.destroy();
-        if (this.bossSymbol) {
-            this.bossSymbol.destroy();
-        }
+        // Kein bossSymbol mehr vorhanden
     }
 }

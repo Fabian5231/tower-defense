@@ -1023,8 +1023,9 @@ this.worldCam.setScroll(
             direction.x /= distance;
             direction.y /= distance;
             
-            projectile.x += direction.x * projectile.speed * (delta / 1000);
-            projectile.y += direction.y * projectile.speed * (delta / 1000);
+            // Projektil-Geschwindigkeit mit gameSpeed skalieren
+            projectile.x += direction.x * projectile.speed * (delta / 1000) * this.gameSpeed;
+            projectile.y += direction.y * projectile.speed * (delta / 1000) * this.gameSpeed;
             
             projectile.graphic.x = projectile.x;
             projectile.graphic.y = projectile.y;

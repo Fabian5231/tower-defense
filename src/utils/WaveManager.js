@@ -72,14 +72,14 @@ export default class WaveManager {
                 health: this.getBossHealth(this.currentWave),
                 speed: Math.max(20, this.getWaveEnemySpeed(this.currentWave) - 20), // Bosses are slower
                 isBoss: true,
-                goldReward: 25
+                goldReward: 5 // Proportional reduziert: 25 → 5 (5x normale Gegner)
             };
         } else {
             return {
                 health: this.getWaveEnemyHealth(this.currentWave),
                 speed: this.getWaveEnemySpeed(this.currentWave),
                 isBoss: false,
-                goldReward: 5
+                goldReward: 1
             };
         }
     }

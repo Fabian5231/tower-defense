@@ -9,7 +9,7 @@ export default class Enemy {
         this.maxHealth = this.health;
         this.speed = config.speed || 50;
         this.isBoss = config.isBoss || false;
-        this.goldReward = config.goldReward || 5;
+        this.goldReward = config.goldReward || 1;
         this.size = this.isBoss ? 35 : 20;
         this.color = this.isBoss ? 0x800080 : 0xff0000;
         

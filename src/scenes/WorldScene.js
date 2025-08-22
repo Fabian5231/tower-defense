@@ -11,8 +11,8 @@ import WaveManager from '../utils/WaveManager.js';
 import TerrainManager from '../utils/TerrainManager.js';
 import PathfindingManager from '../utils/PathfindingManager.js';
 
-export const LEFT_W = 180;
-export const RIGHT_W = 180;
+export const LEFT_W = 200;
+export const RIGHT_W = 200;
 
 export default class WorldScene extends Phaser.Scene {
     constructor() {

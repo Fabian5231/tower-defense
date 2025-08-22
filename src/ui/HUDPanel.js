@@ -4,7 +4,7 @@ export default class HUDPanel {
         this.layout = { 
             x: 12, 
             y: 12, 
-            width: 220 - 24, 
+            width: 200 - 24, 
             line: 22 
         };
         this.texts = {};

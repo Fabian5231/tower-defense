@@ -1,6 +1,6 @@
 import BuildingMenu from '../ui/BuildingMenu.js';
 
-export const RIGHT_W = 220;
+export const RIGHT_W = 200;
 
 export default class UISceneRight extends Phaser.Scene {
     constructor() {

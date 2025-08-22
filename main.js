@@ -5,8 +5,8 @@ import UIGameOver from "./src/scenes/UIGameOver.js";
 
 const config = {
     type: Phaser.AUTO,
-    width: 1400,
-    height: 800,
+    width: 1600,
+    height: 900,
     parent: 'game-container',
     backgroundColor: '#1e1e1e',
     scene: [WorldScene, UISceneLeft, UISceneRight, UIGameOver],

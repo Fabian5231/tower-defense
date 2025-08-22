@@ -26,7 +26,7 @@ export default class BuildingMenu {
                 width: 1,
                 height: 1,
                 maxLevel: 5,
-                range: 120 // Erhöhte Range (Level 1)
+                range: 180 // Stark erhöhte Range (Level 1)
             },
             kanone: {
                 cost: 20,
@@ -35,7 +35,7 @@ export default class BuildingMenu {
                 width: 1,
                 height: 1,
                 maxLevel: 5,
-                range: 50 // Kurze Reichweite für hohen Schaden
+                range: 90 // Erhöhte Reichweite für hohen Schaden
             },
             werfer: {
                 cost: 50,
@@ -44,7 +44,7 @@ export default class BuildingMenu {
                 width: 1,
                 height: 1,
                 maxLevel: 5,
-                range: 200 // MASSIVE Range!
+                range: 300 // EXTREME Range!
             },
             farm: {
                 cost: 10,

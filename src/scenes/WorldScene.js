@@ -523,9 +523,9 @@ this.worldCam.setScroll(
     
     getBuildingTypeInfo(type) {
         const buildingTypes = {
-            tower: { cost: 10, range: 80 },
-            werfer: { cost: 50, range: 200 },
-            kanone: { cost: 30, range: 60 },   // <--- HINZUGEFÜGT
+            tower: { cost: 10, range: 180 },
+            werfer: { cost: 50, range: 300 },
+            kanone: { cost: 30, range: 90 },   // Erhöhte Reichweite
             farm: { cost: 10 },
             factory: { cost: 10 },
             mine: { cost: 30 }

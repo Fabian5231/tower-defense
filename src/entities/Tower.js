@@ -13,13 +13,13 @@ export default class Tower {
         this.level = 1;
         this.type = "tower";
 
-        // Level-basierten Stats definieren (erhöhte Reichweite)
+        // Level-basierten Stats definieren (stark erhöhte Reichweite)
         this.levelStats = {
-            1: { damage: 25, range: 120, health: 75 },
-            2: { damage: 40, range: 150, health: 100 },
-            3: { damage: 55, range: 180, health: 125 },
-            4: { damage: 75, range: 210, health: 150 },
-            5: { damage: 100, range: 240, health: 200 }
+            1: { damage: 25, range: 180, health: 75 },
+            2: { damage: 40, range: 220, health: 100 },
+            3: { damage: 55, range: 260, health: 125 },
+            4: { damage: 75, range: 300, health: 150 },
+            5: { damage: 100, range: 350, health: 200 }
         };
 
         // Fire-Rate bleibt gleich für alle Level

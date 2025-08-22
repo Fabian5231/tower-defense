@@ -13,13 +13,13 @@ export default class Kanone {
         this.level = 1;
         this.type = "kanone";
 
-        // Level-basierte Stats definieren (hoher Schaden, kurze Reichweite)
+        // Level-basierte Stats definieren (hoher Schaden, erhöhte Reichweite)
         this.levelStats = {
-            1: { damage: 150, range: 50, health: 80 }, // Sehr hoher Schaden, sehr kurze Reichweite
-            2: { damage: 200, range: 60, health: 100 },
-            3: { damage: 250, range: 70, health: 120 },
-            4: { damage: 300, range: 80, health: 140 },
-            5: { damage: 400, range: 90, health: 180 }
+            1: { damage: 150, range: 90, health: 80 }, // Sehr hoher Schaden, erhöhte Reichweite
+            2: { damage: 200, range: 110, health: 100 },
+            3: { damage: 250, range: 130, health: 120 },
+            4: { damage: 300, range: 150, health: 140 },
+            5: { damage: 400, range: 180, health: 180 }
         };
 
         // Mittlere Fire-Rate (zwischen Tower und Werfer)

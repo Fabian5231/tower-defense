@@ -202,54 +202,58 @@ export default class TerrainManager {
     }
     
     renderTerrainTile(terrainType, x, y) {
-        let graphic = null;
-        
-        switch (terrainType) {
-            case 'mountain':
-                graphic = this.scene.add.rectangle(
-                    x, y, 
-                    this.gridSize - 2, this.gridSize - 2, 
-                    0x8B7355 // Brown for mountains
-                );
-                graphic.setStrokeStyle(1, 0x654321);
-                // Add mountain symbol
-                const mountainSymbol = this.scene.add.text(x, y, '⛰️', {
-                    fontSize: '16px'
-                }).setOrigin(0.5);
-                this.terrainGraphics.push(mountainSymbol);
-                break;
-                
-            case 'river':
-                graphic = this.scene.add.rectangle(
-                    x, y, 
-                    this.gridSize - 2, this.gridSize - 2, 
-                    0x4682B4 // Steel blue for river
-                );
-                graphic.setAlpha(0.7);
-                break;
-                
-            case 'forest':
-                graphic = this.scene.add.rectangle(
-                    x, y, 
-                    this.gridSize - 2, this.gridSize - 2, 
-                    0x228B22 // Forest green
-                );
-                graphic.setAlpha(0.6);
-                // Add tree symbol
-                const treeSymbol = this.scene.add.text(x, y, '🌲', {
-                    fontSize: '14px'
-                }).setOrigin(0.5);
-                this.terrainGraphics.push(treeSymbol);
-                break;
-                
-            // 'grass' is default - no special rendering needed
-        }
-        
-        if (graphic) {
-            graphic.setDepth(-10); // Behind other objects
-            this.terrainGraphics.push(graphic);
-        }
+    let graphic = null;
+
+    switch (terrainType) {
+        case 'mountain':
+            graphic = this.scene.add.rectangle(
+                x, y,
+                this.gridSize, this.gridSize,   // 👈 volle Größe
+                0x8B7355
+            );
+            graphic.setStrokeStyle(1, 0x654321);
+            const mountainSymbol = this.scene.add.text(x, y, '⛰️', {
+                fontSize: '16px'
+            }).setOrigin(0.5);
+            this.terrainGraphics.push(mountainSymbol);
+            break;
+
+        case 'river':
+            graphic = this.scene.add.rectangle(
+                x, y,
+                this.gridSize, this.gridSize,   // 👈 volle Größe
+                0x4682B4
+            );
+            graphic.setAlpha(0.7);
+            break;
+
+        case 'forest':
+            graphic = this.scene.add.rectangle(
+                x, y,
+                this.gridSize, this.gridSize,   // 👈 volle Größe
+                0x228B22
+            );
+            graphic.setAlpha(0.6);
+            const treeSymbol = this.scene.add.text(x, y, '🌲', {
+                fontSize: '14px'
+            }).setOrigin(0.5);
+            this.terrainGraphics.push(treeSymbol);
+            break;
+
+        case 'bridge':
+            graphic = this.scene.add.rectangle(
+                x, y,
+                this.gridSize, this.gridSize,   // 👈 volle Größe
+                0x8B4513
+            );
+            break;
     }
+
+    if (graphic) {
+        graphic.setDepth(-10);
+        this.terrainGraphics.push(graphic);
+    }
+}
     
     getTerrainAt(gridX, gridY) {
         if (gridY >= 0 && gridY < this.terrainGrid.length &&
